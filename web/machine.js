@@ -1,31 +1,22 @@
 // Stylized 3D view of the Vulcan OmniPro 220 with named hotspots.
-// Exposes window.MachineView = { focus(spec), idle() } and fires
-// 'machineview-ready' on document when the scene is up.
+// The machine itself is a GLB (web/models/omnipro220.glb) bound strictly by
+// node NAME per the frozen model contract, so re-exports with better geometry
+// rebind cleanly. Exposes window.MachineView = { focus(spec), idle() } and
+// fires 'machineview-ready' once the model is loaded and bound, so app.js
+// pending queues keep working.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ACCENT = 0xff6a00;
 
 const container = document.getElementById('machine-canvas');
 
-// ---------- machine dimensions (shared by geometry and panel texture) ----------
-
-const W = 0.66, H = 0.85, D = 1.15;      // chassis extents
-const BOTTOM = 0.03;                      // foot height
-const CY = BOTTOM + H / 2;                // chassis center y
-const FRONT = D / 2;                      // front face z
-const PANEL_W = 0.56, PANEL_H = 0.48;
-const PANEL_TOP = 0.84, PANEL_CY = PANEL_TOP - PANEL_H / 2;
-
-// canvas uv (0..1, v from top) -> local xy on the front panel plane
-function panelXY(u, v) {
-  return { x: (u - 0.5) * PANEL_W, y: PANEL_TOP - v * PANEL_H };
-}
-
-// ---------- front panel texture: stylized always, photo overlay if it loads ----------
+// ---------- LCD texture: drawn face, LCD region cropped onto the GLB screen ----------
 
 const panelCanvas = document.createElement('canvas');
 panelCanvas.width = panelCanvas.height = 512;
@@ -152,6 +143,12 @@ drawStylizedPanel();
 const panelTexture = new THREE.CanvasTexture(panelCanvas);
 panelTexture.colorSpace = THREE.SRGBColorSpace;
 panelTexture.anisotropy = 4;
+// The GLB's lcd_screen quad carries full-face 0-1 UVs over just the LCD
+// glass; crop the drawn face's LCD region onto it. glTF UVs expect
+// flipY=false (v runs from the top of the canvas).
+panelTexture.flipY = false;
+panelTexture.offset.set(140 / 512, 132 / 512);
+panelTexture.repeat.set(232 / 512, 126 / 512);
 
 // ---------- scene ----------
 
@@ -172,6 +169,14 @@ container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 
+// neutral studio IBL so every angle of the near-black chassis reads on the
+// dark plate (the rear used to go black-on-black under directionals alone)
+{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+  pmrem.dispose();
+}
+
 const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 30);
 const HOME_POS = new THREE.Vector3(1.35, 0.95, 1.85);
 const HOME_TARGET = new THREE.Vector3(0, 0.45, 0);
@@ -187,14 +192,17 @@ controls.maxPolarAngle = Math.PI * 0.55;
 controls.autoRotate = !REDUCED;
 controls.autoRotateSpeed = 0.7;
 
-scene.add(new THREE.HemisphereLight(0xc3ccd6, 0x33373c, 1.35));
-const key = new THREE.DirectionalLight(0xffffff, 2.3);
+scene.add(new THREE.HemisphereLight(0xc3ccd6, 0x33373c, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 1.7);
 key.position.set(2, 3, 2.5);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0xb8c6d4, 0.9);
-rim.position.set(-2.5, 1.5, -1.5);
+const rim = new THREE.DirectionalLight(0xb8c6d4, 1.5);
+rim.position.set(-2.5, 2.0, -2.2);
 scene.add(rim);
-const bayFill = new THREE.DirectionalLight(0x9aa8b6, 0.85);
+const rearFill = new THREE.DirectionalLight(0xaeb9c6, 0.9);
+rearFill.position.set(1.9, 1.4, -2.4);
+scene.add(rearFill);
+const bayFill = new THREE.DirectionalLight(0x9aa8b6, 0.8);
 bayFill.position.set(-3, 1.2, 1.8);
 scene.add(bayFill);
 const glow = new THREE.PointLight(ACCENT, 0.3, 5);
@@ -208,7 +216,7 @@ scene.add(stepLight);
 // floor
 const floor = new THREE.Mesh(
   new THREE.CircleGeometry(2.4, 48),
-  new THREE.MeshStandardMaterial({ color: 0x0d0e11, roughness: 0.95 })
+  new THREE.MeshStandardMaterial({ color: 0x0d0e11, roughness: 0.95, envMapIntensity: 0.35 })
 );
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -0.002;
@@ -217,376 +225,82 @@ const grid = new THREE.GridHelper(4.8, 24, 0x2a2e34, 0x17191d);
 grid.position.y = 0.001;
 scene.add(grid);
 
-// ---------- machine ----------
+// ---------- machine: GLB-bound registries ----------
+// The model loads asynchronously; bindModel() below fills these registries.
+// Every runtime path guards against a missing bind, so a load failure
+// degrades to the empty floor instead of breaking the app shell.
 
 const machine = new THREE.Group();
 scene.add(machine);
 
-const steel = new THREE.MeshStandardMaterial({ color: 0x1a1c1f, roughness: 0.55, metalness: 0.35 });
-const darker = new THREE.MeshStandardMaterial({ color: 0x101215, roughness: 0.7, metalness: 0.2 });
-const recess = new THREE.MeshStandardMaterial({ color: 0x0c0e10, roughness: 0.85, metalness: 0.1 });
-const orange = new THREE.MeshStandardMaterial({ color: ACCENT, roughness: 0.45, metalness: 0.15 });
-const brass = new THREE.MeshStandardMaterial({ color: 0xa97142, roughness: 0.35, metalness: 0.75 });
-const copper = new THREE.MeshStandardMaterial({ color: 0x9c6b3d, roughness: 0.5, metalness: 0.6 });
+const copper = new THREE.MeshStandardMaterial({ color: 0xc27a3a, roughness: 0.35, metalness: 0.7, emissive: 0x2a1404 });
 
-// chassis
-const chassis = new THREE.Mesh(new RoundedBoxGeometry(W, H, D, 4, 0.04), steel);
-chassis.position.y = CY;
-machine.add(chassis);
+let glbRoot = null;   // scaled GLB scene root
+let MACH_TOP = 0.86;  // world-space machine extents (refined at bind)
+let MACH_MID = 0.44;
+let MACH_FOOT = 1.45; // largest horizontal extent
 
-// feet
-for (const [fx, fz] of [[-0.26, -0.5], [0.26, -0.5], [-0.26, 0.5], [0.26, 0.5]]) {
-  const foot = new THREE.Mesh(new THREE.BoxGeometry(0.08, BOTTOM, 0.08), darker);
-  foot.position.set(fx, BOTTOM / 2, fz);
-  machine.add(foot);
+// rotatables bound by name: kid -> { obj, qHome }. Every knob is authored as
+// a disc about its own local Y, so spins compose qHome with a local-Y twist;
+// visual angles are tracked here (the reducer owns the canonical values).
+const KNOBS = new Map();
+const knobAngles = { 'knob-left': 0, 'knob-right': 0, 'knob-center': 0, 'tension-knob': 0 };
+const _spinQ = new THREE.Quaternion();
+const LOCAL_X = new THREE.Vector3(1, 0, 0);
+const LOCAL_Y = new THREE.Vector3(0, 1, 0);
+
+function setKnobAngle(kid, rad) {
+  const k = KNOBS.get(kid);
+  if (!k) return;
+  k.obj.quaternion.copy(k.qHome).multiply(_spinQ.setFromAxisAngle(LOCAL_Y, rad));
+  knobAngles[kid] = rad;
 }
 
-// handle
-for (const hz of [-0.28, 0.28]) {
-  const riser = new THREE.Mesh(new RoundedBoxGeometry(0.1, 0.1, 0.06, 2, 0.015), darker);
-  riser.position.set(0, BOTTOM + H + 0.02, hz);
-  machine.add(riser);
+function knobFaceDir(kid) {
+  const k = KNOBS.get(kid);
+  if (!k) return new THREE.Vector3(0, 0, 1);
+  return new THREE.Vector3(0, 1, 0)
+    .applyQuaternion(k.obj.getWorldQuaternion(new THREE.Quaternion())).normalize();
 }
-const bar = new THREE.Mesh(new RoundedBoxGeometry(0.1, 0.05, 0.68, 2, 0.02), darker);
-bar.position.set(0, BOTTOM + H + 0.085, 0);
-machine.add(bar);
 
-// front panel (self-lit instrument face)
-const panel = new THREE.Mesh(
-  new THREE.PlaneGeometry(PANEL_W, PANEL_H),
-  new THREE.MeshBasicMaterial({ map: panelTexture })
-);
-panel.position.set(0, PANEL_CY, FRONT + 0.003);
-machine.add(panel);
+// side door (part_side-panel): authored CLOSED, hinge origin on the rear
+// vertical edge; opening swings the front edge out past the machine's left
+const DOOR_OPEN = -1.31; // ~75°
+let door = null, doorHomeQ = null, doorAngle = 0;
+const doorHandleLocal = new THREE.Vector3();
 
-// knobs over the drawn dials (hidden if the product photo texture takes over)
-// each knob is a named rotatable group so tutorials can spin it about the panel normal
-const knobs = new THREE.Group();
-const panelKnobs = new Map();
-for (const [kid, u] of [['knob-left', 140 / 512], ['knob-right', 372 / 512]]) {
-  const { x, y } = panelXY(u, 350 / 512);
-  const g = new THREE.Group();
-  g.position.set(x, y, FRONT + 0.026);
-  const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.055, 0.045, 24), orange);
-  knob.rotation.x = Math.PI / 2;
-  const pointer = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.036, 0.012), darker);
-  pointer.position.set(0, 0.026, 0.019);
-  g.add(knob, pointer);
-  knobs.add(g);
-  panelKnobs.set(kid, g);
+function setDoorAngle(rad) {
+  if (!door) return;
+  door.quaternion.copy(doorHomeQ).multiply(_spinQ.setFromAxisAngle(LOCAL_Y, rad));
+  doorAngle = rad;
 }
-machine.add(knobs);
 
-// dinse sockets on the lower front
-function makeSocket(x, ringColor) {
-  const g = new THREE.Group();
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.048, 0.014, 12, 32),
-    new THREE.MeshStandardMaterial({ color: ringColor, roughness: 0.5, metalness: 0.4 })
-  );
-  const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 20), brass);
-  pin.rotation.x = Math.PI / 2;
-  pin.position.z = 0.01;
-  g.add(ring, pin);
-  g.position.set(x, 0.16, FRONT + 0.005);
-  machine.add(g);
-  return g;
+// power rocker (part_power-switch): nudge about its local pivot axis
+let powerNode = null, powerHomeQ = null;
+
+function setPowerRocker(on) {
+  if (!powerNode) return;
+  powerNode.quaternion.copy(powerHomeQ).multiply(_spinQ.setFromAxisAngle(LOCAL_X, on ? 0.16 : -0.16));
 }
-makeSocket(0.16, 0x7a2a24);   // positive: dark red collar
-makeSocket(-0.16, 0x22262b);  // negative: black collar
 
-// +/- labels above the sockets
-function polarityLabel(text, x) {
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#cfd2d6';
-  ctx.font = '700 44px -apple-system, Arial, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, 32, 34);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.05, 0.05),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
-  );
-  m.position.set(x, 0.245, FRONT + 0.004);
-  machine.add(m);
-}
-polarityLabel('+', 0.16);
-polarityLabel('−', -0.16);
+// polarity jumper hops between the lug posts (lug_a = positive, the authored park)
+let jumperGroup = null, jumperHomeQ = null;
+let JUMPER_LUGS = null;
 
-// power switch, lower right front
-const switchBase = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.09, 0.02), darker);
-switchBase.position.set(0.24, 0.14, FRONT + 0.008);
-machine.add(switchBase);
-const rocker = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.06, 0.02), orange);
-rocker.position.set(0.24, 0.145, FRONT + 0.02);
-rocker.rotation.x = -0.18;
-machine.add(rocker);
+// wire spline through wirepath_0..5. There is no wire mesh in the GLB; the
+// tube stays procedural so the `thread` verb keeps its drawRange reveal.
+let wireCurve = null, wireMesh = null, WIRE_IDX = 0;
+const WIRE_SEGS = 64;
 
-// gas inlet on the rear
-const inletNut = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 6), brass);
-inletNut.rotation.x = Math.PI / 2;
-inletNut.position.set(0.17, 0.68, -FRONT - 0.015);
-machine.add(inletNut);
-const inletStem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.06, 16), brass);
-inletStem.rotation.x = Math.PI / 2;
-inletStem.position.set(0.17, 0.68, -FRONT - 0.04);
-machine.add(inletStem);
-
-// wire-feed bay, open on the left side
-const SIDE = -W / 2;
-const bay = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.62), recess);
-bay.rotation.y = -Math.PI / 2;
-bay.position.set(SIDE - 0.0015, 0.49, 0.2);
-machine.add(bay);
-
-// spool: two flanges + wire drum + hub
-const spoolGroup = new THREE.Group();
-for (const off of [-0.033, 0.033]) {
-  const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.012, 36), darker);
-  flange.rotation.z = Math.PI / 2;
-  flange.position.x = off;
-  spoolGroup.add(flange);
-}
-const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.054, 36), copper);
-drum.rotation.z = Math.PI / 2;
-spoolGroup.add(drum);
-const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.075, 20), orange);
-hub.rotation.z = Math.PI / 2;
-spoolGroup.add(hub);
-spoolGroup.position.set(SIDE - 0.045, 0.5, 0.12);
-machine.add(spoolGroup);
-
-// drive block + tension knob
-const drive = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.1, 0.12, 2, 0.01), darker);
-drive.position.set(SIDE - 0.04, 0.48, 0.42);
-machine.add(drive);
-// tension knob spins about its x axis; a ridge on the face makes rotation legible
-const tensionGroup = new THREE.Group();
-tensionGroup.position.set(SIDE - 0.04, 0.62, 0.42);
-const tension = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 20), orange);
-tension.rotation.z = Math.PI / 2;
-const tensionRidge = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.042), darker);
-tensionRidge.position.set(-0.028, 0.012, 0);
-tensionGroup.add(tension, tensionRidge);
-machine.add(tensionGroup);
-const tensionStem = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.07, 12), darker);
-tensionStem.rotation.z = Math.PI / 2;
-tensionStem.position.set(SIDE - 0.02, 0.62, 0.42);
-machine.add(tensionStem);
-
-// wire run: spline from the spool over both feed guides into the drive.
-// Draw range is animatable so the `thread` verb can reveal it progressively.
-const wireCurve = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(SIDE - 0.045, 0.615, 0.13),
-  new THREE.Vector3(SIDE - 0.052, 0.596, 0.22),
-  new THREE.Vector3(SIDE - 0.052, 0.565, 0.30),
-  new THREE.Vector3(SIDE - 0.046, 0.545, 0.36),
-  new THREE.Vector3(SIDE - 0.04, 0.53, 0.40)
-]);
-const WIRE_SEGS = 48;
-const wireMesh = new THREE.Mesh(new THREE.TubeGeometry(wireCurve, WIRE_SEGS, 0.006, 8, false), copper);
-machine.add(wireMesh);
-const WIRE_IDX = wireMesh.geometry.index.count / WIRE_SEGS; // indices per tubular segment
 function setWireRatio(r) {
+  if (!wireMesh) return;
   const segs = Math.round(WIRE_SEGS * Math.max(0, Math.min(1, r)));
   wireMesh.visible = segs > 0;
   wireMesh.geometry.setDrawRange(0, segs * WIRE_IDX);
 }
-// feed guides the wire passes through
-for (const t of [0.42, 0.72]) {
-  const p = wireCurve.getPoint(t);
-  const guide = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.005, 8, 18), darker);
-  guide.rotation.x = Math.PI / 2;
-  guide.rotation.z = Math.PI / 2;
-  guide.position.copy(p);
-  machine.add(guide);
-}
 
-// polarity terminals inside the bay
-for (const tz of [0.28, 0.38]) {
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.045, 14), brass);
-  post.rotation.z = Math.PI / 2;
-  post.position.set(SIDE - 0.02, 0.28, tz);
-  machine.add(post);
-  const collar = new THREE.Mesh(
-    new THREE.TorusGeometry(0.02, 0.006, 8, 20),
-    new THREE.MeshStandardMaterial({ color: tz > 0.33 ? 0x7a2a24 : 0x22262b, roughness: 0.5 })
-  );
-  collar.rotation.y = Math.PI / 2;
-  collar.position.set(SIDE - 0.045, 0.28, tz);
-  machine.add(collar);
-}
-
-// polarity jumper: lug eye + short cable stub, relocatable between the two lugs
-const JUMPER_LUGS = {
-  positive: new THREE.Vector3(SIDE - 0.058, 0.28, 0.38),
-  negative: new THREE.Vector3(SIDE - 0.058, 0.28, 0.28)
-};
-const jumperGroup = new THREE.Group();
-{
-  const eye = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.007, 8, 20), brass);
-  eye.rotation.y = Math.PI / 2;
-  const stub = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, -0.02, 0),
-      new THREE.Vector3(-0.015, -0.055, -0.02),
-      new THREE.Vector3(-0.01, -0.085, -0.055)
-    ]), 12, 0.007, 8, false),
-    darker
-  );
-  jumperGroup.add(eye, stub);
-  jumperGroup.position.copy(JUMPER_LUGS.positive);
-  machine.add(jumperGroup);
-}
-
-// side panel: feed-bay cover hinged on the rear vertical edge. HOME is open
-// (swung back) so the bay, spool and feed hotspots read exactly as before.
-const sidePanelPivot = new THREE.Group();
-sidePanelPivot.position.set(SIDE - 0.005, 0.49, -0.15);
-const SIDE_PANEL_OPEN = -2.35;
-const SIDE_PANEL_CLOSED = 0;
-{
-  const cover = new THREE.Mesh(new RoundedBoxGeometry(0.105, 0.62, 0.72, 2, 0.02), steel);
-  cover.position.set(-0.058, 0, 0.36);
-  const covDecal = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.2, 0.03), orange);
-  covDecal.position.set(-0.113, 0.18, 0.55);
-  const covHandle = new THREE.Mesh(new RoundedBoxGeometry(0.02, 0.09, 0.028, 2, 0.008), darker);
-  covHandle.position.set(-0.115, -0.1, 0.62);
-  sidePanelPivot.add(cover, covDecal, covHandle);
-  sidePanelPivot.rotation.y = SIDE_PANEL_OPEN;
-  machine.add(sidePanelPivot);
-}
-
-// gun-lead bulkhead between the dinse sockets (where the MIG gun lead lands)
-const gunBulkhead = new THREE.Group();
-{
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.011, 10, 24), darker);
-  const bore = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 16), brass);
-  bore.rotation.x = Math.PI / 2;
-  gunBulkhead.add(collar, bore);
-  gunBulkhead.position.set(0, 0.16, FRONT + 0.005);
-  machine.add(gunBulkhead);
-}
-
-// cable connectors (DINSE plugs + tube-stub cables), parked on the floor in
-// front of the machine until a tutorial seats them
-const rubber = new THREE.MeshStandardMaterial({ color: 0x17191c, roughness: 0.9, metalness: 0.05 });
-function makeConnector(gripLen) {
-  const g = new THREE.Group();
-  const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.05, 18), brass);
-  pin.rotation.x = Math.PI / 2;
-  pin.position.z = -0.028;
-  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.031, gripLen, 18), rubber);
-  grip.rotation.x = Math.PI / 2;
-  grip.position.z = gripLen / 2 - 0.003;
-  const band = new THREE.Mesh(new THREE.TorusGeometry(0.0295, 0.004, 8, 20), orange);
-  band.position.z = gripLen - 0.02;
-  const cable = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0, gripLen - 0.005),
-      new THREE.Vector3(0.01, -0.012, gripLen + 0.07),
-      new THREE.Vector3(-0.015, -0.028, gripLen + 0.16),
-      new THREE.Vector3(0.005, -0.032, gripLen + 0.24)
-    ]), 20, 0.011, 8, false),
-    rubber
-  );
-  g.add(pin, grip, band, cable);
-  machine.add(g);
-  return g;
-}
-const connectorGround = makeConnector(0.07);
-const connectorElectrode = makeConnector(0.07);
-const connectorGun = makeConnector(0.085);
-
-// stub MIG torch parked bottom-right; carries the nozzle + contact tip
-const TORCH_AXIS = new THREE.Vector3(0, 0.7, -0.714).normalize();
-const TORCH_HEAD = new THREE.Vector3(0.55, 0.098, 0.837);
-const qTorch = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), TORCH_AXIS);
-const nozzle = new THREE.Group();
-const contactTip = new THREE.Group();
-{
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.023, 0.13, 16), rubber);
-  handle.rotation.x = Math.PI / 2;
-  handle.position.set(0.55, 0.024, 0.96);
-  machine.add(handle);
-  const trigger = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.02, 0.03), orange);
-  trigger.position.set(0.55, 0.012, 0.93);
-  machine.add(trigger);
-  const neck = new THREE.Mesh(
-    new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.55, 0.028, 0.9),
-      new THREE.Vector3(0.55, 0.035, 0.875),
-      new THREE.Vector3(0.55, 0.062, 0.872),
-      TORCH_HEAD.clone()
-    ]), 16, 0.011, 10, false),
-    steel
-  );
-  machine.add(neck);
-  const tipMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.005, 0.05, 10), brass);
-  contactTip.add(tipMesh);
-  machine.add(contactTip);
-  const nozzleMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.014, 0.062, 16), copper);
-  const nozzleRing = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.0035, 8, 18), orange);
-  nozzleRing.rotation.x = Math.PI / 2;
-  nozzleRing.position.y = 0.028;
-  nozzle.add(nozzleMesh, nozzleRing);
-  machine.add(nozzle);
-}
-
-// ghost wordmark + vents on the right side
-(function sideDecal() {
-  const c = document.createElement('canvas');
-  c.width = 512;
-  c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(233,235,237,0.09)';
-  ctx.font = '800 118px -apple-system, "Helvetica Neue", Arial, sans-serif';
-  ctx.fillText('VULCAN', 22, 130);
-  ctx.fillStyle = 'rgba(255,106,0,0.5)';
-  ctx.fillRect(24, 152, 180, 6);
-  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-  ctx.lineWidth = 5;
-  for (let i = 0; i < 6; i++) {
-    ctx.beginPath();
-    ctx.moveTo(330, 180 + i * 12);
-    ctx.lineTo(490, 180 + i * 12);
-    ctx.stroke();
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.92, 0.46),
-    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
-  );
-  m.rotation.y = Math.PI / 2;
-  m.position.set(W / 2 + 0.002, 0.52, 0);
-  machine.add(m);
-})();
-
-// optional photo texture for the front panel; falls back to the drawn panel
-if (new URLSearchParams(location.search).get('nophoto') !== '1') {
-  const img = new Image();
-  img.onload = () => {
-    if (panelStateActive) return; // the settings twin owns the panel texture now
-    const c = panelCanvas.getContext('2d');
-    // crop the front-panel region of the product shot (upper-right of frame)
-    c.fillStyle = '#101114';
-    c.fillRect(0, 0, 512, 512);
-    c.drawImage(img, img.width * 0.46, img.height * 0.2, img.width * 0.4, img.height * 0.34, 0, 0, 512, 512);
-    c.fillStyle = 'rgba(8,9,11,0.22)';
-    c.fillRect(0, 0, 512, 512);
-    c.strokeStyle = '#2a2e33';
-    c.lineWidth = 4;
-    c.strokeRect(4, 4, 504, 504);
-    panelTexture.needsUpdate = true;
-    knobs.visible = false; // the photo has its own knobs
-  };
-  img.src = '/product.webp';
-}
+// stub torch (nozzle/contact-tip seats); axis recomputed from the GLB
+let TORCH_AXIS = new THREE.Vector3(0, 0.14, -0.99).normalize();
 
 // ---------- hotspots ----------
 
@@ -637,37 +351,47 @@ function makeLabelSprite(text, primary) {
   return sprite;
 }
 
-const HOTSPOT_DEFS = [
-  { id: 'front-panel',        pos: [0, 0.6, 0.58],        n: [0, 0, 1],        view: [0.25, 0.18, 1],  dist: 1.15, r: 0.13, label: 'Front panel' },
-  { id: 'socket-positive',    pos: [0.16, 0.16, 0.6],     n: [0, 0, 1],        view: [0.3, -0.02, 1],  dist: 0.8,  r: 0.07, label: 'Positive socket (+)' },
-  { id: 'socket-negative',    pos: [-0.16, 0.16, 0.6],    n: [0, 0, 1],        view: [-0.3, -0.02, 1], dist: 0.8,  r: 0.07, label: 'Negative socket (−)' },
-  { id: 'polarity-terminals', pos: [-0.36, 0.28, 0.33],   n: [-1, 0, 0],       view: [-1, 0.18, 0.45], dist: 0.95, r: 0.08, label: 'Polarity terminals' },
-  { id: 'wire-feed',          pos: [-0.37, 0.48, 0.42],   n: [-1, 0, 0],       view: [-1, 0.25, 0.5],  dist: 1.05, r: 0.08, label: 'Wire feed drive' },
-  { id: 'tension-knob',       pos: [-0.37, 0.62, 0.42],   n: [-1, 0, 0],       view: [-1, 0.3, 0.4],   dist: 0.9,  r: 0.06, label: 'Tension knob' },
-  { id: 'spool',              pos: [-0.38, 0.5, 0.12],    n: [-1, 0, 0],       view: [-1, 0.25, 0.2],  dist: 1.1,  r: 0.13, label: 'Wire spool' },
-  { id: 'power-switch',       pos: [0.24, 0.14, 0.6],     n: [0, 0, 1],        view: [0.45, 0, 1],     dist: 0.8,  r: 0.07, label: 'Power switch' },
-  { id: 'gas-inlet',          pos: [0.17, 0.68, -0.6],    n: [0, 0, -1],       view: [0.4, 0.3, -1],   dist: 0.95, r: 0.06, label: 'Gas inlet' }
-];
+// per-hotspot presentation metadata; positions come from the hotspot_* empties
+const HOTSPOT_META = {
+  'front-panel':        { n: [0, 0.12, 1],  view: [0.25, 0.18, 1],  dist: 1.15, r: 0.13, label: 'Front panel' },
+  'socket-positive':    { n: [0, 0.12, 1],  view: [0.3, -0.02, 1],  dist: 0.8,  r: 0.07, label: 'Positive socket (+)' },
+  'socket-negative':    { n: [0, 0.12, 1],  view: [-0.3, -0.02, 1], dist: 0.8,  r: 0.07, label: 'Negative socket (−)' },
+  'polarity-terminals': { n: [-1, 0, 0],    view: [-1, 0.18, 0.45], dist: 0.95, r: 0.08, label: 'Polarity terminals' },
+  'wire-feed':          { n: [-1, 0, 0],    view: [-1, 0.25, 0.5],  dist: 1.05, r: 0.08, label: 'Wire feed drive' },
+  'tension-knob':       { n: [-1, 0, 0],    view: [-1, 0.3, 0.4],   dist: 0.9,  r: 0.06, label: 'Tension knob' },
+  'spool':              { n: [-1, 0, 0],    view: [-1, 0.25, 0.2],  dist: 1.1,  r: 0.13, label: 'Wire spool' },
+  'power-switch':       { n: [0, 0.12, 1],  view: [0.45, 0, 1],     dist: 0.8,  r: 0.07, label: 'Power switch' },
+  'gas-inlet':          { n: [0, 0, -1],    view: [0.4, 0.3, -1],   dist: 0.95, r: 0.06, label: 'Gas inlet' }
+};
+
+// machine-view artifacts never zoom past this: the part stays ≤ ~40% of the
+// frame with the whole working face visible (rings point, the lens doesn't)
+const FOCUS_MIN_D = 1.25;
 
 const hotspots = new Map();
-for (const def of HOTSPOT_DEFS) {
+const hitMeshes = [];
+const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+
+function bindHotspot(id, meta, worldPos) {
   const group = new THREE.Group();
-  group.position.fromArray(def.pos);
-  const normal = new THREE.Vector3().fromArray(def.n).normalize();
-  const ring = makeRing(def.r);
+  group.position.copy(worldPos);
+  const normal = new THREE.Vector3().fromArray(meta.n).normalize();
+  const ring = makeRing(meta.r);
   ring.quaternion.setFromUnitVectors(Z, normal);
   ring.visible = false;
   ring.renderOrder = 998;
   group.add(ring);
+  // generous invisible hit sphere for ask-by-touching raycasts
+  const hit = new THREE.Mesh(new THREE.SphereGeometry(Math.max(meta.r * 1.35, 0.075), 12, 8), hitMat);
+  hit.userData.hotspotId = id;
+  group.add(hit);
+  hitMeshes.push(hit);
   machine.add(group);
-  hotspots.set(def.id, {
-    id: def.id,
-    group,
-    ring,
-    normal,
-    view: new THREE.Vector3().fromArray(def.view).normalize(),
-    dist: def.dist,
-    label: def.label,
+  hotspots.set(id, {
+    id, group, ring, normal,
+    view: new THREE.Vector3().fromArray(meta.view).normalize(),
+    dist: meta.dist,
+    label: meta.label,
     sprite: null
   });
 }
@@ -710,6 +434,9 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// Camera moves read like a person repositioning: straight blends for small
+// moves, but a large heading change walks AROUND the machine (cylindrical
+// interpolation about the subject) instead of cutting through it.
 function tweenCamera(toPos, toTarget) {
   setHover(null); // programmatic camera moves invalidate any stationary hover
   if (REDUCED) {
@@ -717,13 +444,22 @@ function tweenCamera(toPos, toTarget) {
     controls.target.copy(toTarget);
     return;
   }
+  const f = camera.position;
+  const a0 = Math.atan2(f.z - toTarget.z, f.x - toTarget.x);
+  const a1 = Math.atan2(toPos.z - toTarget.z, toPos.x - toTarget.x);
+  const r0 = Math.hypot(f.x - toTarget.x, f.z - toTarget.z);
+  const r1 = Math.hypot(toPos.x - toTarget.x, toPos.z - toTarget.z);
+  let dA = a1 - a0;
+  while (dA > Math.PI) dA -= Math.PI * 2;
+  while (dA < -Math.PI) dA += Math.PI * 2;
   tween = {
     start: performance.now(),
     dur: 800,
     fromPos: camera.position.clone(),
     toPos,
     fromTarget: controls.target.clone(),
-    toTarget
+    toTarget,
+    orbit: Math.abs(dA) > Math.PI / 3 && Math.min(r0, r1) > 0.7 ? { a0, dA, r0, r1 } : null
   };
 }
 
@@ -731,8 +467,19 @@ function updateTween(now) {
   if (!tween) return;
   const t = Math.min(1, (now - tween.start) / tween.dur);
   const k = easeInOutCubic(t);
-  camera.position.lerpVectors(tween.fromPos, tween.toPos, k);
   controls.target.lerpVectors(tween.fromTarget, tween.toTarget, k);
+  if (tween.orbit) {
+    const o = tween.orbit;
+    const ang = o.a0 + o.dA * k;
+    const r = o.r0 + (o.r1 - o.r0) * k;
+    camera.position.set(
+      tween.toTarget.x + Math.cos(ang) * r,
+      tween.fromPos.y + (tween.toPos.y - tween.fromPos.y) * k,
+      tween.toTarget.z + Math.sin(ang) * r
+    );
+  } else {
+    camera.position.lerpVectors(tween.fromPos, tween.toPos, k);
+  }
   if (t >= 1) tween = null;
 }
 
@@ -744,6 +491,7 @@ function focus(spec) {
   if (!spec || typeof spec !== 'object' || typeof spec.target !== 'string') return false;
   const known = hotspots.get(spec.target);
   const anchor = known || hotspots.get('front-panel');
+  if (!anchor) return false; // model failed to bind; degrade silently
   if (!known) console.warn('MachineView: unknown target', spec.target);
 
   // a machine-view artifact arriving mid-tutorial pauses it (resume in player)
@@ -768,10 +516,12 @@ function focus(spec) {
 
   const worldPos = anchor.group.getWorldPosition(new THREE.Vector3());
   // aim slightly above the anchor so labels staggered upward stay in frame;
-  // narrow (portrait) canvases need extra distance so labels fit horizontally
+  // narrow (portrait) canvases need extra distance so labels fit horizontally.
+  // Distance is clamped (FOCUS_MIN_D) so the focused part never fills the
+  // frame — the whole working face stays visible and the ring points.
   const aspectComp = Math.min(1.8, Math.max(1, 1.9 / camera.aspect));
   const aim = worldPos.clone().add(UP.clone().multiplyScalar(0.09));
-  tweenCamera(aim.clone().addScaledVector(anchor.view, anchor.dist * aspectComp), aim);
+  tweenCamera(aim.clone().addScaledVector(anchor.view, Math.max(anchor.dist, FOCUS_MIN_D) * aspectComp), aim);
   return known !== undefined;
 }
 
@@ -799,7 +549,15 @@ const anims = new Set();
 function updateAnims(now) {
   for (const a of anims) {
     const t = Math.min(1, (now - a.start) / a.dur);
-    a.update(easeInOutCubic(t), t);
+    try {
+      a.update(easeInOutCubic(t), t);
+    } catch (err) {
+      // a poisoned update must not hang its await or break later anims
+      anims.delete(a);
+      a.resolve();
+      console.warn('machine: animation step failed, skipping', err);
+      continue;
+    }
     if (t >= 1) {
       anims.delete(a);
       a.resolve();
@@ -964,33 +722,17 @@ function updateHand(now) {
 }
 
 // ---------- movable-part registry, seats, transforms ----------
-
-const qId = new THREE.Quaternion();
-const qYaw = (y) => new THREE.Quaternion().setFromEuler(new THREE.Euler(0, y, 0));
-const qLie = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI / 2));
+// Free-moving parts are re-parented out of the scaled GLB tree into
+// `machine` (identity transform) at bind time, so every free/seat transform
+// below is a plain world transform and the verb runners stay world-space.
 
 const PARTS = new Map();
 function regPart(id, obj, free, opts = {}) {
   PARTS.set(id, { id, obj, free, spin: opts.spin || 'z', approach: opts.approach || V3(0, 0.8, 0.55).normalize(), seatHome: opts.seatHome || null });
 }
 
-regPart('connector-ground', connectorGround, { pos: V3(0.34, 0.036, 0.92), quat: qYaw(2.7) });
-regPart('connector-electrode', connectorElectrode, { pos: V3(0.52, 0.036, 0.64), quat: qYaw(2.2) });
-regPart('connector-gun', connectorGun, { pos: V3(0.14, 0.038, 1.05), quat: qYaw(3.4) });
-regPart('nozzle', nozzle, { pos: V3(0.66, 0.021, 0.74), quat: qLie }, {
-  spin: 'y',
-  seatHome: { pos: TORCH_HEAD.clone().addScaledVector(TORCH_AXIS, 0.035), quat: qTorch.clone() }
-});
-regPart('contact-tip', contactTip, { pos: V3(0.72, 0.007, 0.7), quat: qLie }, {
-  spin: 'y',
-  seatHome: { pos: TORCH_HEAD.clone().addScaledVector(TORCH_AXIS, 0.045), quat: qTorch.clone() }
-});
-
-const SEATS = {
-  'socket-positive': { pos: V3(0.16, 0.16, FRONT + 0.033), quat: qId, normal: V3(0, 0, 1) },
-  'socket-negative': { pos: V3(-0.16, 0.16, FRONT + 0.033), quat: qId, normal: V3(0, 0, 1) },
-  'wire-feed':       { pos: V3(0, 0.16, FRONT + 0.033), quat: qId, normal: V3(0, 0, 1) }
-};
+// seat transforms come from the seat_* empties at bind time
+let SEATS = {};
 
 function canonSeat(name, pid) {
   if (typeof name !== 'string') return null;
@@ -1027,23 +769,30 @@ function pointablePos(id) {
   if (PARTS.has(id)) {
     return { pos: PARTS.get(id).obj.getWorldPosition(new THREE.Vector3()), dir: approachFor(id) };
   }
-  if (panelKnobs.has(id)) return { pos: panelKnobs.get(id).getWorldPosition(new THREE.Vector3()), dir: V3(0, 0, 1) };
-  if (id === 'tension-knob') return { pos: tensionGroup.getWorldPosition(new THREE.Vector3()), dir: V3(-1, 0, 0) };
-  if (id === 'power-switch') return { pos: rocker.getWorldPosition(new THREE.Vector3()), dir: V3(0, 0, 1) };
-  if (id === 'side-panel') return { pos: panelHandleWorld(), dir: panelOutwardNormal() };
-  if (id === 'wire') return { pos: wireCurve.getPoint(0.5).clone(), dir: V3(-1, 0.2, 0).normalize() };
-  if (id === 'polarity-jumper') return { pos: jumperGroup.getWorldPosition(new THREE.Vector3()), dir: V3(-1, 0.35, 0.2).normalize() };
+  if (id === 'tension-knob' && KNOBS.has(id)) {
+    // reached into the open bay from the machine's left
+    return { pos: KNOBS.get(id).obj.getWorldPosition(new THREE.Vector3()), dir: V3(-1, 0.35, 0.25).normalize() };
+  }
+  if (KNOBS.has(id)) {
+    return { pos: KNOBS.get(id).obj.getWorldPosition(new THREE.Vector3()), dir: knobFaceDir(id) };
+  }
+  if (id === 'power-switch' && powerNode) {
+    return { pos: powerNode.getWorldPosition(new THREE.Vector3()), dir: V3(0, 0.12, 1).normalize() };
+  }
+  if (id === 'side-panel' && door) return { pos: panelHandleWorld(), dir: panelOutwardNormal() };
+  if (id === 'wire' && wireCurve) return { pos: wireCurve.getPoint(0.5).clone(), dir: V3(-1, 0.2, 0).normalize() };
+  if (id === 'polarity-jumper' && jumperGroup) {
+    return { pos: jumperGroup.getWorldPosition(new THREE.Vector3()), dir: V3(-1, 0.35, 0.2).normalize() };
+  }
   return null;
 }
 
 function panelHandleWorld() {
-  return V3(-0.115, -0.1, 0.62)
-    .applyAxisAngle(UP, sidePanelPivot.rotation.y)
-    .add(sidePanelPivot.position);
+  return door.localToWorld(doorHandleLocal.clone());
 }
 
 function panelOutwardNormal() {
-  return V3(-1, 0, 0).applyAxisAngle(UP, sidePanelPivot.rotation.y);
+  return V3(-1, 0, 0).applyAxisAngle(UP, doorAngle);
 }
 
 function approachFor(pid) {
@@ -1060,18 +809,20 @@ function defaultState() {
       'connector-ground': null, 'connector-electrode': null, 'connector-gun': null,
       nozzle: 'torch', 'contact-tip': 'torch'
     },
-    knobs: { 'knob-left': 0, 'knob-right': 0, 'tension-knob': 0 },
+    knobs: { 'knob-left': 0, 'knob-right': 0, 'knob-center': 0, 'tension-knob': 0 },
     power: false,
-    panelOpen: true,
+    panelOpen: false,
     wire: 1,
     jumper: 'positive'
   };
 }
 
-const KNOB_AXES = { 'knob-left': ['z', -1], 'knob-right': ['z', -1], 'tension-knob': ['x', 1] };
+// axis letter is informational (every knob spins about its own local Y);
+// the sign fixes what "cw" means for the reducer
+const KNOB_AXES = { 'knob-left': ['y', -1], 'knob-right': ['y', -1], 'knob-center': ['y', -1], 'tension-knob': ['y', -1] };
 
 function knobObj(kid) {
-  return panelKnobs.get(kid) || (kid === 'tension-knob' ? tensionGroup : null);
+  return KNOBS.get(kid)?.obj || null;
 }
 
 function applyAction(s, a) {
@@ -1121,7 +872,9 @@ function baselineFor(steps) {
     for (const a of step.actions) {
       if ((a.verb === 'open' || a.verb === 'close') && a.part === 'side-panel' && !seen.panel) {
         seen.panel = true;
-        if (a.verb === 'open') base.panelOpen = false;
+        // first-touch visibility: an open-first script starts closed, a
+        // close-first script starts open
+        base.panelOpen = a.verb === 'close';
       } else if (a.verb === 'thread' && !seen.wire) {
         seen.wire = true;
         base.wire = 0;
@@ -1166,14 +919,11 @@ function applyState(s, keepHand = false) {
     if (!p) continue;
     setTransform(p.obj, seatId ? seatTransform(pid, seatId) : p.free);
   }
-  for (const [kid, val] of Object.entries(s.knobs)) {
-    const obj = knobObj(kid);
-    if (obj) obj.rotation[KNOB_AXES[kid][0]] = val;
-  }
-  rocker.rotation.x = s.power ? 0.18 : -0.18;
-  sidePanelPivot.rotation.y = s.panelOpen ? SIDE_PANEL_OPEN : SIDE_PANEL_CLOSED;
+  for (const [kid, val] of Object.entries(s.knobs)) setKnobAngle(kid, val);
+  setPowerRocker(s.power);
+  setDoorAngle(s.panelOpen ? DOOR_OPEN : 0);
   setWireRatio(s.wire);
-  jumperGroup.position.copy(JUMPER_LUGS[s.jumper]);
+  if (jumperGroup && JUMPER_LUGS) jumperGroup.position.copy(JUMPER_LUGS[s.jumper]);
   if (!keepHand) parkHandInstant();
 }
 
@@ -1317,7 +1067,6 @@ const RUNNERS = {
   async rotate(a, token) {
     const obj = knobObj(a.part);
     if (!obj || !tut.live) return warnSkip('unknown knob for rotate', a);
-    const [axis] = KNOB_AXES[a.part];
     const at = pointablePos(a.part);
     await moveHand(hoverPoint(at.pos, at.dir, 0.12), at.pos, 'point', 0.45, token);
     await moveHand(hoverPoint(at.pos, at.dir, 0.08), at.pos, 'grip', 0.2, token);
@@ -1326,7 +1075,7 @@ const RUNNERS = {
     const to = tut.live.knobs[a.part];
     const hq = hand.quaternion.clone();
     await animate(620 / tut.speed, (k) => {
-      obj.rotation[axis] = from + (to - from) * k;
+      setKnobAngle(a.part, from + (to - from) * k);
       hand.quaternion.copy(hq).multiply(
         new THREE.Quaternion().setFromAxisAngle(V3(0, 0, 1), (to - from) * 0.35 * Math.sin(k * Math.PI))
       );
@@ -1341,11 +1090,11 @@ const RUNNERS = {
     await moveHand(hoverPoint(at.pos, at.dir, 0.13), at.pos, 'point', 0.45, token);
     const base = hand.position.clone();
     const isPower = a.part === 'power-switch';
-    const r0 = rocker.rotation.x;
-    const r1 = isPower ? (tut.live && !tut.live.power ? 0.18 : -0.18) : r0;
+    const goingOn = isPower && tut.live ? !tut.live.power : false;
+    let flipped = false;
     await animate(360 / tut.speed, (k) => {
       hand.position.copy(base).addScaledVector(at.dir, -0.045 * Math.sin(k * Math.PI));
-      if (isPower && k > 0.45) rocker.rotation.x = r1;
+      if (isPower && !flipped && k > 0.45) { setPowerRocker(goingOn); flipped = true; }
     });
     token.check();
     if (isPower && tut.live) applyAction(tut.live, a);
@@ -1355,6 +1104,7 @@ const RUNNERS = {
 
   async thread(a, token) {
     if (a.part && a.part !== 'wire') warnSkip('thread expects part "wire"', a);
+    if (!wireCurve) return warnSkip('wire path not bound', a);
     const start = wireCurve.getPoint(0);
     await moveHand(start.clone().add(V3(-0.1, 0.04, 0)), start, 'point', 0.5, token);
     await animate(1300 / tut.speed, (k) => {
@@ -1372,6 +1122,7 @@ const RUNNERS = {
 
   async move(a, token) {
     if (a.part !== 'polarity-jumper') return warnSkip('move supports polarity-jumper only', a);
+    if (!jumperGroup || !JUMPER_LUGS) return warnSkip('polarity jumper not bound', a);
     const dir = V3(-1, 0.35, 0.2).normalize();
     const pos = jumperGroup.getWorldPosition(new THREE.Vector3());
     await moveHand(hoverPoint(pos, dir, 0.12), pos, 'point', 0.45, token);
@@ -1384,7 +1135,7 @@ const RUNNERS = {
     const p0 = jumperGroup.position.clone();
     await animate(180 / tut.speed, (k) => {
       jumperGroup.position.lerpVectors(p0, dest, k);
-      jumperGroup.quaternion.slerp(qId, k);
+      jumperGroup.quaternion.slerp(jumperHomeQ, k);
     });
     token.check();
     await releaseHand(dest, dir, token);
@@ -1407,15 +1158,16 @@ const RUNNERS = {
 
 async function swingPanel(a, open, token) {
   if (a.part && a.part !== 'side-panel') return warnSkip('open/close supports side-panel only', a);
+  if (!door) return warnSkip('side panel not bound', a);
   if (tut.live && tut.live.panelOpen === open) {
     return RUNNERS.point({ target: 'wire-feed' }, token); // already there: gesture at it
   }
   let hp = panelHandleWorld();
   await moveHand(hoverPoint(hp, panelOutwardNormal(), 0.11), hp, 'grip', 0.5, token);
-  const r0 = sidePanelPivot.rotation.y;
-  const r1 = open ? SIDE_PANEL_OPEN : SIDE_PANEL_CLOSED;
+  const r0 = doorAngle;
+  const r1 = open ? DOOR_OPEN : 0;
   await animate(780 / tut.speed, (k) => {
-    sidePanelPivot.rotation.y = r0 + (r1 - r0) * k;
+    setDoorAngle(r0 + (r1 - r0) * k);
     hp = panelHandleWorld();
     hand.position.copy(hoverPoint(hp, panelOutwardNormal(), 0.11));
     hand.lookAt(hp);
@@ -1464,6 +1216,32 @@ function normStep(raw) {
 }
 
 // ---------- camera move without labels (tutorial steps) ----------
+// Tutorial framing is first-person: the camera stands where a welder would —
+// in front of the face being worked, eyes just above the machine top, looking
+// down 10–20° — and never zooms past the whole-machine silhouette. The
+// pulsing ring + label do the pointing, not the lens.
+
+function personDistance() {
+  const halfH = Math.tan((camera.fov * Math.PI) / 360);
+  const need = Math.max(
+    (MACH_TOP * 1.3) / (2 * halfH),
+    (MACH_FOOT * 1.2) / (2 * halfH * Math.max(0.6, camera.aspect))
+  );
+  // floor of 2.05 keeps the swung-open door inside the frame bottom even
+  // when the camera stands on the door side (eye above the machine, pitched
+  // down ~16°) — the whole silhouette plus working door must always fit
+  return Math.min(2.9, Math.max(2.05, need));
+}
+
+// steps that work the side door need extra standoff: the door swings toward
+// a camera standing on the bay side, and its near bottom corner would pass
+// under the frame edge at normal person distance
+function stepWorksDoor(i) {
+  const step = tut.script?.steps[i];
+  if (!step) return false;
+  return !!tut.states[i]?.panelOpen ||
+    step.actions.some((a) => (a.verb === 'open' || a.verb === 'close') && a.part === 'side-panel');
+}
 
 function viewTarget(tid, opts = {}) {
   const h = hotspots.get(tid);
@@ -1474,17 +1252,23 @@ function viewTarget(tid, opts = {}) {
   idleMode = false;
   controls.autoRotate = false;
   const worldPos = h.group.getWorldPosition(new THREE.Vector3());
-  const aspectComp = Math.min(1.8, Math.max(1, 1.9 / camera.aspect));
-  const dist = h.dist * aspectComp * (opts.bias ? 1.18 : 1);
-  const aim = worldPos.clone().add(UP.clone().multiplyScalar(0.05));
-  const camPos = aim.clone().addScaledVector(h.view, dist);
-  if (opts.bias) {
-    // tutorial framing: subject in the upper-left two-thirds with surrounding
-    // geometry visible — pan the aim toward screen-right/down, lift the camera
-    const right = aim.clone().sub(camPos).normalize().cross(UP).normalize();
-    aim.addScaledVector(right, 0.14 * dist).addScaledVector(UP, -0.05 * dist);
-    camPos.addScaledVector(UP, 0.1 * dist);
+  if (!opts.person) {
+    // machine-view style framing (panel-state twin): clamped like focus()
+    const aspectComp = Math.min(1.8, Math.max(1, 1.9 / camera.aspect));
+    const aim = worldPos.clone().add(UP.clone().multiplyScalar(0.05));
+    tweenCamera(aim.clone().addScaledVector(h.view, Math.max(h.dist, FOCUS_MIN_D) * aspectComp), aim);
+    return true;
   }
+  // stand on the side the worked face points toward, nudged in front of the part
+  const dirH = V3(h.normal.x, 0, h.normal.z);
+  if (dirH.lengthSq() < 0.05) dirH.set(0, 0, 1);
+  dirH.normalize();
+  const partH = V3(worldPos.x, 0, worldPos.z);
+  if (partH.lengthSq() > 0.001) dirH.addScaledVector(partH.normalize(), 0.4).normalize();
+  // aim mostly at the machine's center so the whole silhouette stays in frame
+  const aim = V3(0, MACH_MID, 0).lerp(V3(worldPos.x, Math.min(worldPos.y, MACH_TOP * 0.85), worldPos.z), 0.25);
+  const camPos = aim.clone().addScaledVector(dirH, personDistance() + (opts.wide ? 0.55 : 0));
+  camPos.y = MACH_TOP + 0.24; // fixed eye height, just above the machine top
   tweenCamera(camPos, aim);
   return true;
 }
@@ -1584,7 +1368,7 @@ async function runStep(i, token) {
   showCaption(i);
   updatePlayerUI();
   emitTutState();
-  if (step.camera && viewTarget(step.camera, { bias: true })) {
+  if (step.camera && viewTarget(step.camera, { person: true, wide: stepWorksDoor(i) })) {
     await animate(750 / tut.speed, () => {});
     token.check();
   }
@@ -1655,7 +1439,7 @@ function gotoStep(i, andPlay) {
     tut.live = JSON.parse(JSON.stringify(tut.states[i]));
     showCaption(i);
     const step = tut.script.steps[i];
-    if (step.camera) viewTarget(step.camera, { bias: true });
+    if (step.camera) viewTarget(step.camera, { person: true, wide: stepWorksDoor(i) });
     if (REDUCED) {
       for (const a of step.actions) {
         if (a.verb === 'highlight' && hotspots.has(a.target)) {
@@ -1720,11 +1504,194 @@ if (tpEls) {
   });
 }
 
-// place every movable part at its home transform, deterministically
-applyState(defaultState());
+// ---------- GLB load + bind (everything above keys off these registries) ----------
 
-window.MachineView = { focus, idle, tutorial, panelState, flash };
-document.dispatchEvent(new CustomEvent('machineview-ready'));
+function exposeApi() {
+  applyState(defaultState()); // place every movable part deterministically
+  window.MachineView = { focus, idle, tutorial, panelState, flash };
+  document.dispatchEvent(new CustomEvent('machineview-ready'));
+}
+
+function bindModel(gltf) {
+  glbRoot = gltf.scene;
+  // normalize to the previous procedural machine's footprint so camera
+  // constants, hand scale and hand approach paths still compose
+  const preBox = new THREE.Box3().setFromObject(glbRoot);
+  const S = Math.min(3, Math.max(1.2, 0.86 / Math.max(0.2, preBox.max.y)));
+  glbRoot.scale.setScalar(S);
+  machine.add(glbRoot);
+  glbRoot.updateMatrixWorld(true);
+
+  const nodes = new Map();
+  glbRoot.traverse((o) => { if (o.name) nodes.set(o.name, o); });
+  const N = (name) => nodes.get(name) || null;
+  const wPos = (o) => o.getWorldPosition(new THREE.Vector3());
+  const wQuat = (o) => o.getWorldQuaternion(new THREE.Quaternion());
+
+  const box = new THREE.Box3().setFromObject(glbRoot);
+  MACH_TOP = box.max.y;
+  MACH_MID = box.max.y * 0.52;
+  MACH_FOOT = Math.max(box.max.x - box.min.x, box.max.z - box.min.z);
+
+  // materials: the PBR set responds to the studio IBL; the LCD swaps to the
+  // live canvas texture (unlit so panel-state stays legible from any angle)
+  const seen = new Set();
+  glbRoot.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (seen.has(m)) continue;
+      seen.add(m);
+      if ('envMapIntensity' in m) m.envMapIntensity = 0.85;
+    }
+    if (o.material && o.material.name === 'LCD') {
+      o.material = new THREE.MeshBasicMaterial({ map: panelTexture, toneMapped: false });
+    }
+  });
+
+  // hotspots: hotspot_* empties anchor rings, labels and raycast hit spheres
+  for (const [id, meta] of Object.entries(HOTSPOT_META)) {
+    const e = N('hotspot_' + id);
+    if (e) bindHotspot(id, meta, wPos(e));
+    else console.warn('model: missing hotspot node', id);
+  }
+
+  // seats (plug fully-seated transforms; the plug axis is the empty's local Y)
+  SEATS = {};
+  for (const [sid, node] of [
+    ['socket-positive', 'seat_socket-positive'],
+    ['socket-negative', 'seat_socket-negative'],
+    ['wire-feed', 'seat_gun-bulkhead']
+  ]) {
+    const e = N(node);
+    if (!e) { console.warn('model: missing seat node', node); continue; }
+    const quat = wQuat(e);
+    SEATS[sid] = { pos: wPos(e), quat, normal: V3(0, 1, 0).applyQuaternion(quat).normalize() };
+  }
+
+  // cable connectors: plug + cable stub grouped so they travel together;
+  // parked poses come from the home_* empties
+  const freeOf = (homeName, fallbackObj) => {
+    const e = N(homeName);
+    if (e) return { pos: wPos(e), quat: wQuat(e) };
+    return { pos: wPos(fallbackObj), quat: wQuat(fallbackObj) };
+  };
+  const bindConnector = (pid) => {
+    const main = N('part_' + pid);
+    if (!main) { console.warn('model: missing part', pid); return; }
+    const g = new THREE.Group();
+    g.position.copy(wPos(main));
+    g.quaternion.copy(wQuat(main));
+    machine.add(g);
+    g.updateMatrixWorld(true);
+    g.attach(main);
+    const cable = N('part_' + pid + '_cable');
+    if (cable) g.attach(cable);
+    regPart(pid, g, freeOf('home_' + pid, g));
+  };
+  bindConnector('connector-ground');
+  bindConnector('connector-electrode');
+  bindConnector('connector-gun');
+
+  // torch consumables: seated as authored; removal parks them on the floor
+  // beside the torch, lying down along a plausible horizontal axis
+  const nozzleN = N('part_nozzle');
+  const tipN = N('part_contact-tip');
+  const torchN = N('part_torch-body');
+  if (nozzleN && tipN) {
+    TORCH_AXIS = wPos(tipN).sub(wPos(nozzleN)).normalize();
+    const base = torchN ? wPos(torchN) : wPos(nozzleN);
+    const lieQ = new THREE.Quaternion().setFromUnitVectors(TORCH_AXIS, V3(0.88, 0, 0.48).normalize());
+    for (const [pid, node, offX, offZ, y] of [
+      ['nozzle', nozzleN, 0.3, 0.14, 0.02],
+      ['contact-tip', tipN, 0.37, 0.05, 0.008]
+    ]) {
+      const seatHome = { pos: wPos(node), quat: wQuat(node) };
+      machine.attach(node);
+      regPart(pid, node, {
+        pos: V3(base.x + offX, y, base.z + offZ),
+        quat: lieQ.clone().multiply(seatHome.quat)
+      }, { spin: 'y', seatHome });
+    }
+  } else console.warn('model: missing torch consumables');
+
+  // polarity jumper hops between the lug_a/lug_b posts
+  jumperGroup = N('part_polarity-jumper');
+  const lugA = N('lug_a');
+  const lugB = N('lug_b');
+  if (jumperGroup && lugA && lugB) {
+    machine.attach(jumperGroup);
+    jumperHomeQ = jumperGroup.quaternion.clone();
+    JUMPER_LUGS = { positive: wPos(lugA), negative: wPos(lugB) };
+  } else {
+    jumperGroup = null;
+    console.warn('model: missing polarity jumper/lugs');
+  }
+
+  // rotatables spin in place about their authored local Y
+  for (const kid of ['knob-left', 'knob-right', 'knob-center', 'tension-knob']) {
+    const node = N('part_' + kid);
+    if (node) KNOBS.set(kid, { obj: node, qHome: node.quaternion.clone() });
+    else if (kid !== 'knob-center') console.warn('model: missing knob', kid);
+  }
+
+  powerNode = N('part_power-switch');
+  if (powerNode) powerHomeQ = powerNode.quaternion.clone();
+  else console.warn('model: missing power switch');
+
+  door = N('part_side-panel');
+  if (door) {
+    doorHomeQ = door.quaternion.clone();
+    const g = door.geometry;
+    g.computeBoundingBox();
+    doorHandleLocal.set(
+      g.boundingBox.min.x - 0.015,
+      g.boundingBox.min.y + (g.boundingBox.max.y - g.boundingBox.min.y) * 0.35,
+      g.boundingBox.max.z * 0.9
+    );
+  } else console.warn('model: missing side panel');
+
+  // wire spline through the wirepath empties (spool → guides → drive → bulkhead)
+  const pathPts = [];
+  for (let i = 0; i <= 5; i++) {
+    const e = N('wirepath_' + i);
+    if (e) pathPts.push(wPos(e));
+  }
+  // Presentation pass: the authored empties sit at hardware bore centers
+  // (spool spindle, guide bores, drive rollers), where a tube is swallowed by
+  // the meshes. Bring the exposed spans out to just inside the door plane so
+  // the thread verb reads as a copper line: start at the spool rim and run
+  // the guide spans proud of the bay hardware. The drive entry/exit and the
+  // run to the bulkhead stay buried on purpose (a real wire is enclosed there).
+  if (door && pathPts.length === 6) {
+    const proudX = door.getWorldPosition(new THREE.Vector3()).x + 0.006;
+    const spoolN = N('part_spool');
+    if (spoolN) {
+      const sb = new THREE.Box3().setFromObject(spoolN);
+      pathPts[0].y = sb.min.y + 0.012; // come off the spool rim, not the hub
+    }
+    for (let i = 0; i <= 2; i++) pathPts[i].x = Math.min(pathPts[i].x, proudX);
+  }
+  if (pathPts.length >= 2) {
+    wireCurve = new THREE.CatmullRomCurve3(pathPts);
+    // radius is stylized (wire + liner): thick enough to read as a bright
+    // copper line from the first-person tutorial distance (~2.6 m)
+    wireMesh = new THREE.Mesh(new THREE.TubeGeometry(wireCurve, WIRE_SEGS, 0.009, 8, false), copper);
+    machine.add(wireMesh);
+    WIRE_IDX = wireMesh.geometry.index.count / WIRE_SEGS;
+  } else console.warn('model: missing wirepath empties');
+
+  exposeApi();
+}
+
+new GLTFLoader().load(
+  '/web/models/omnipro220.glb',
+  bindModel,
+  undefined,
+  (err) => {
+    console.error('machine model failed to load; floor-only fallback', err);
+    exposeApi(); // app.js queues still drain; every op degrades safely
+  }
+);
 
 // ---------- interaction pauses the idle orbit ----------
 
@@ -1803,11 +1770,11 @@ function setKnobTag(kid, text) {
     old.material.dispose();
     knobTags.delete(kid);
   }
-  const g = panelKnobs.get(kid);
-  if (!g || !text) return;
+  const k = KNOBS.get(kid);
+  if (!k || !text) return;
   const tag = makeLabelSprite(text, false);
   tag.scale.multiplyScalar(0.8);
-  tag.position.copy(g.position).add(V3(0, -0.135, 0.05));
+  tag.position.copy(k.obj.getWorldPosition(new THREE.Vector3())).add(V3(0, -0.11, 0.07));
   machine.add(tag);
   knobTags.set(kid, tag);
 }
@@ -1816,19 +1783,17 @@ function panelState(spec) {
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return false;
   mergePanelSpec(spec);
   panelStateActive = true;
-  knobs.visible = true; // reclaim the dials from the photo overlay
   pauseTutorial('panel-state');
   clearHighlights();
   viewTarget('front-panel');
   for (const kid of ['knob-left', 'knob-right']) {
-    const g = panelKnobs.get(kid);
     const value = livePanel[kid].value;
-    setKnobTag(kid, value);
-    if (!g || !value) continue;
-    // drawn dial sweep is 270° with the pointer up at mid-sweep
+    setKnobTag(kid, value ? `${livePanel[kid].label} · ${value}` : '');
+    if (!KNOBS.has(kid) || !value) continue;
+    // dial sweep is 270° with the pointer up at mid-sweep
     const to = (0.5 - knobFrac(value)) * Math.PI * 1.5;
-    const from = g.rotation.z;
-    animate(600, (k) => { g.rotation.z = from + (to - from) * k; });
+    const from = knobAngles[kid];
+    animate(600, (k) => { setKnobAngle(kid, from + (to - from) * k); });
   }
   const draw = (k) => {
     drawStylizedPanel(livePanel, k);
@@ -1843,16 +1808,6 @@ function panelState(spec) {
 const raycaster = new THREE.Raycaster();
 const ndcVec = new THREE.Vector2();
 const worldVec = new THREE.Vector3();
-const hitMeshes = [];
-{
-  const hitMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
-  for (const def of HOTSPOT_DEFS) {
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(Math.max(def.r * 1.35, 0.075), 12, 8), hitMat);
-    mesh.userData.hotspotId = def.id;
-    hotspots.get(def.id).group.add(mesh);
-    hitMeshes.push(mesh);
-  }
-}
 
 function pickHotspot(e) {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -1981,26 +1936,44 @@ function resize() {
 new ResizeObserver(resize).observe(container);
 resize();
 
+// three r160's WebGLAnimation only schedules the next frame AFTER this
+// callback returns, so an uncaught throw here would kill the loop for the
+// rest of the session. Catch, log once, keep looping — and always render.
+let loopErrLogged = false;
+function logLoopErr(err) {
+  if (loopErrLogged) return;
+  loopErrLogged = true;
+  console.error('machine: render-loop error (loop kept alive)', err);
+}
+
 renderer.setAnimationLoop((now) => {
   if (paused) return;
-  updateTween(now);
-  updateAnims(now);
-  updateHand(now);
-  controls.update();
-  // key light rides just off the camera-to-subject axis while a tutorial is
-  // active so bay/side framings stay legible without lifting the mood
-  const wantLight = tut.script && !tut.ended ? 2.4 : 0;
-  stepLight.intensity += (wantLight - stepLight.intensity) * (REDUCED ? 1 : 0.08);
-  if (stepLight.intensity > 0.005) {
-    stepLight.position.copy(camera.position).lerp(controls.target, 0.7);
-    stepLight.position.y += 0.45;
-  }
-  if (!REDUCED && active.size > 0) {
-    const phase = 0.5 + 0.5 * Math.sin(now / 250);
-    for (const h of active) {
-      h.ring.scale.setScalar(1 + 0.25 * phase);
-      h.ring.material.opacity = 0.95 - 0.55 * phase;
+  try {
+    updateTween(now);
+    updateAnims(now);
+    updateHand(now);
+    controls.update();
+    // key light rides just off the camera-to-subject axis while a tutorial is
+    // active so bay/side framings stay legible without lifting the mood
+    const wantLight = tut.script && !tut.ended ? 2.4 : 0;
+    stepLight.intensity += (wantLight - stepLight.intensity) * (REDUCED ? 1 : 0.08);
+    if (stepLight.intensity > 0.005) {
+      stepLight.position.copy(camera.position).lerp(controls.target, 0.7);
+      stepLight.position.y += 0.45;
     }
+    if (!REDUCED && active.size > 0) {
+      const phase = 0.5 + 0.5 * Math.sin(now / 250);
+      for (const h of active) {
+        h.ring.scale.setScalar(1 + 0.25 * phase);
+        h.ring.material.opacity = 0.95 - 0.55 * phase;
+      }
+    }
+  } catch (err) {
+    logLoopErr(err);
   }
-  renderer.render(scene, camera);
+  try {
+    renderer.render(scene, camera);
+  } catch (err) {
+    logLoopErr(err);
+  }
 });
