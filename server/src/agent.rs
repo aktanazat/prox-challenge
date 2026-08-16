@@ -186,11 +186,12 @@ pub fn spawn_child(config: &ChildConfig, resume: bool) -> std::io::Result<Child>
 
     cmd.current_dir(&config.knowledge_dir);
     cmd.env_clear();
-    if let Some(path) = std::env::var_os("PATH") {
-        cmd.env("PATH", path);
-    }
-    if let Some(home) = std::env::var_os("HOME") {
-        cmd.env("HOME", home);
+    // Minimal pass-through set. USER is load-bearing on macOS: the CLI's
+    // keychain credential lookup reports "Not logged in" without it.
+    for var in ["PATH", "HOME", "USER", "LOGNAME", "TMPDIR"] {
+        if let Some(value) = std::env::var_os(var) {
+            cmd.env(var, value);
+        }
     }
     if let Some(key) = &config.anthropic_api_key {
         cmd.env("ANTHROPIC_API_KEY", key);
