@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Sandboxed artifact renderer. Runs from an opaque origin (sandbox="allow-scripts",
+     no allow-same-origin), so all parent communication uses postMessage with '*'.
+     Heavy dependencies resolve through this static import map but load lazily,
+     only when an artifact of the matching type arrives. -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.412.0?external=react"
+  }
+}
+</script>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0;
+    background: #141619;
+    color: #e8eaed;
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+  #root { padding: 12px; }
+  #root svg { max-width: 100%; height: auto; }
+  #root img { max-width: 100%; }
+  .shell-note {
+    padding: 16px 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: #6f757c;
+  }
+  pre.fallback {
+    margin: 0;
+    padding: 4px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+    color: #a8adb4;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+'use strict';
+
+var root = document.getElementById('root');
+// The parent replaces __FRAME_ID__ per iframe instance; sandboxed srcdoc
+// WindowProxy identity/postMessage is unreliable in some Chromium builds, so
+// a dedicated MessageChannel port is transferred with shell-ready and every
+// message also carries the frame key for the window-level fallback path.
+var FRAME_ID = '__FRAME_ID__';
+var channel = new MessageChannel();
+var post = function (msg) {
+  msg.frame = FRAME_ID;
+  channel.port1.postMessage(msg);
+  try { window.parent.postMessage(msg, '*'); } catch (e) { /* port path remains */ }
+};
+
+/* ---------- height reporting ---------- */
+
+var lastHeight = -1;
+var heightRaf = 0;
+function reportHeight() {
+  if (heightRaf) return;
+  heightRaf = requestAnimationFrame(function () {
+    heightRaf = 0;
+    var h = Math.ceil(Math.max(root.scrollHeight + 4, document.body.scrollHeight));
+    if (h !== lastHeight) {
+      lastHeight = h;
+      post({ type: 'artifact-resize', height: h });
+    }
+  });
+}
+new ResizeObserver(reportHeight).observe(root);
+new MutationObserver(reportHeight).observe(root, { childList: true, subtree: true });
+
+/* ---------- runtime errors surface as artifact errors ---------- */
+
+var currentId = null;
+window.addEventListener('error', function (e) {
+  if (currentId !== null) {
+    post({ type: 'artifact-error', id: currentId, message: String(e.message || 'script error') });
+  }
+});
+window.addEventListener('unhandledrejection', function (e) {
+  if (currentId !== null) {
+    var m = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+    post({ type: 'artifact-error', id: currentId, message: m });
+  }
+});
+
+/* ---------- lazy dependency loaders ---------- */
+
+function loadScript(src) {
+  return new Promise(function (resolve, reject) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = function () { resolve(); };
+    s.onerror = function () { reject(new Error('failed to load ' + src)); };
+    document.head.appendChild(s);
+  });
+}
+
+var mermaidPromise = null;
+function getMermaid() {
+  if (!mermaidPromise) {
+    post({ type: 'artifact-progress', note: 'loading mermaid' });
+    mermaidPromise = import('https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs')
+      .then(function (mod) {
+        var mermaid = mod.default;
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'dark',
+          darkMode: true,
+          fontFamily: '-apple-system, "Segoe UI", "Helvetica Neue", sans-serif',
+          themeVariables: { primaryColor: '#22262b', primaryBorderColor: '#3a4048', lineColor: '#a8adb4' }
+        });
+        return mermaid;
+      });
+    mermaidPromise.catch(function () { mermaidPromise = null; });
+  }
+  return mermaidPromise;
+}
+
+var reactStackPromise = null;
+function getReactStack() {
+  if (!reactStackPromise) {
+    post({ type: 'artifact-progress', note: 'loading react stack' });
+    reactStackPromise = Promise.all([
+      import('react'),
+      import('react-dom/client'),
+      import('recharts'),
+      import('lucide-react'),
+      loadScript('https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js'),
+      loadScript('https://cdn.tailwindcss.com/3.4.5')
+    ]).then(function (mods) {
+      post({ type: 'artifact-progress', note: 'react stack ready' });
+      var reactNs = mods[0];
+      return {
+        modules: {
+          'react': reactNs,
+          'react-dom/client': mods[1],
+          'react-dom': mods[1],
+          'recharts': mods[2],
+          'lucide-react': mods[3]
+        },
+        React: reactNs.default || reactNs,
+        ReactDOMClient: mods[1].default || mods[1]
+      };
+    });
+    reactStackPromise.catch(function () { reactStackPromise = null; });
+  }
+  return reactStackPromise;
+}
+
+/* ---------- import/export rewriting for generated JSX ---------- */
+
+function bindImportClause(clause, moduleExpr, bound, out) {
+  clause = clause.trim();
+  var star = clause.match(/^\*\s+as\s+([A-Za-z_$][\w$]*)$/);
+  if (star) {
+    out.push('const ' + star[1] + ' = ' + moduleExpr + ';');
+    bound.add(star[1]);
+    return;
+  }
+  var m = clause.match(/^([A-Za-z_$][\w$]*)?\s*,?\s*(?:\{([\s\S]*)\})?$/);
+  if (!m) throw new Error('unsupported import clause: ' + clause);
+  if (m[1]) {
+    out.push('const ' + m[1] + ' = (' + moduleExpr + ').default ?? ' + moduleExpr + ';');
+    bound.add(m[1]);
+  }
+  if (m[2]) {
+    var parts = m[2].split(',').map(function (p) { return p.trim(); }).filter(Boolean);
+    var fields = parts.map(function (p) {
+      var asMatch = p.match(/^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/);
+      if (asMatch) { bound.add(asMatch[2]); return asMatch[1] + ': ' + asMatch[2]; }
+      if (!/^[A-Za-z_$][\w$]*$/.test(p)) throw new Error('unsupported import binding: ' + p);
+      bound.add(p);
+      return p;
+    });
+    out.push('const { ' + fields.join(', ') + ' } = ' + moduleExpr + ';');
+  }
+}
+
+var KNOWN_MODULES = { 'react': 1, 'react-dom': 1, 'react-dom/client': 1, 'recharts': 1, 'lucide-react': 1 };
+var REACT_HOOKS = ['useState', 'useEffect', 'useMemo', 'useCallback', 'useRef',
+                   'useContext', 'useReducer', 'useLayoutEffect', 'useId'];
+
+function compileReactSource(source) {
+  var src = source
+    .replace(/^\s*```[a-zA-Z]*\s*\n/, '')
+    .replace(/\n```\s*$/, '');
+
+  var bound = new Set();
+  var prelude = [];
+
+  // import X from 'mod' / import { a, b as c } from 'mod' / import * as N from 'mod'
+  src = src.replace(
+    /^[ \t]*import\s+([^;'"]+?)\s+from\s+['"]([^'"]+)['"]\s*;?[ \t]*$/gm,
+    function (_all, clause, spec) {
+      if (spec.charAt(0) === '.' || /\.css$/.test(spec)) return '';
+      if (!KNOWN_MODULES[spec]) throw new Error('unsupported import: ' + spec);
+      bindImportClause(clause, '__modules[' + JSON.stringify(spec) + ']', bound, prelude);
+      return '';
+    }
+  );
+  // side-effect imports: import './x.css';
+  src = src.replace(/^[ \t]*import\s+['"][^'"]+['"]\s*;?[ \t]*$/gm, '');
+  // named exports become plain declarations
+  src = src.replace(/^([ \t]*)export\s+(const|let|var|function|class|async)\b/gm, '$1$2');
+  src = src.replace(/^[ \t]*export\s+\{[^}]*\}\s*;?[ \t]*$/gm, '');
+  // default export captured for mounting
+  src = src.replace(/^([ \t]*)export\s+default\s+/gm, '$1;const __DEFAULT_EXPORT__ = ');
+
+  if (!bound.has('React')) {
+    prelude.push('const React = __modules["react"].default ?? __modules["react"];');
+    bound.add('React');
+  }
+  REACT_HOOKS.forEach(function (h) {
+    if (!bound.has(h)) prelude.push('const ' + h + ' = React.' + h + ';');
+  });
+
+  var tail = ';__MOUNT__(typeof __DEFAULT_EXPORT__ !== "undefined" ? __DEFAULT_EXPORT__' +
+             ' : (typeof App !== "undefined" ? App : null));';
+
+  var compiled = Babel.transform(src, {
+    presets: [['react', { runtime: 'classic' }]],
+    filename: 'artifact.jsx'
+  }).code;
+
+  // Prelude bindings sit in the function scope; generated code runs in a nested
+  // block so its own `const useState = ...` style declarations shadow legally.
+  return prelude.join('\n') + '\n{\n' + compiled + '\n' + tail + '\n}';
+}
+
+/* ---------- renderers ---------- */
+
+var reactRoot = null;
+
+function resetRoot() {
+  if (reactRoot) {
+    try { reactRoot.unmount(); } catch (e) { /* already gone */ }
+    reactRoot = null;
+  }
+  root.textContent = '';
+}
+
+async function renderHtml(source) {
+  resetRoot();
+  var host = document.createElement('div');
+  host.innerHTML = source;
+  root.appendChild(host);
+  // Scripts inserted via innerHTML never execute; recreate them so they do.
+  var scripts = Array.prototype.slice.call(host.querySelectorAll('script'));
+  for (var i = 0; i < scripts.length; i++) {
+    var old = scripts[i];
+    var s = document.createElement('script');
+    for (var j = 0; j < old.attributes.length; j++) {
+      s.setAttribute(old.attributes[j].name, old.attributes[j].value);
+    }
+    if (old.src) {
+      await new Promise(function (resolve) {
+        s.onload = s.onerror = resolve;
+        old.parentNode.replaceChild(s, old);
+      });
+    } else {
+      s.textContent = old.textContent;
+      old.parentNode.replaceChild(s, old);
+    }
+  }
+}
+
+function renderSvg(source) {
+  var doc = new DOMParser().parseFromString(source, 'image/svg+xml');
+  if (doc.querySelector('parsererror')) throw new Error('invalid SVG');
+  resetRoot();
+  root.appendChild(document.importNode(doc.documentElement, true));
+}
+
+var mermaidSeq = 0;
+async function renderMermaid(source) {
+  var mermaid = await getMermaid();
+  var id = 'mmd' + (++mermaidSeq);
+  var out;
+  try {
+    out = await mermaid.render(id, source.trim());
+  } finally {
+    // mermaid leaves a temp element behind on parse failure
+    var stray = document.getElementById('d' + id);
+    if (stray) stray.remove();
+  }
+  resetRoot();
+  var wrap = document.createElement('div');
+  wrap.innerHTML = out.svg;
+  root.appendChild(wrap);
+}
+
+async function renderReact(source) {
+  var stack = await getReactStack();
+  var code = compileReactSource(source);
+  var mounted = null;
+  var fn = new Function('__modules', '__MOUNT__', code);
+  fn(stack.modules, function (c) { mounted = c; });
+  if (!mounted) throw new Error('component has no default export');
+
+  resetRoot();
+  var mountEl = document.createElement('div');
+  root.appendChild(mountEl);
+
+  var React = stack.React;
+  // Error boundary: render failures become an artifact-error, not a blank card.
+  function Boundary(props) { React.Component.call(this, props); this.state = { err: null }; }
+  Boundary.prototype = Object.create(React.Component.prototype);
+  Boundary.prototype.constructor = Boundary;
+  Boundary.getDerivedStateFromError = function (err) { return { err: err }; };
+  Boundary.prototype.componentDidCatch = function (err) {
+    post({ type: 'artifact-error', id: currentId, message: String(err && err.message || err) });
+  };
+  Boundary.prototype.render = function () {
+    if (this.state.err) {
+      return React.createElement('pre', { className: 'fallback' },
+        'render error: ' + String(this.state.err.message || this.state.err));
+    }
+    return this.props.children;
+  };
+
+  reactRoot = stack.ReactDOMClient.createRoot(mountEl);
+  reactRoot.render(React.createElement(Boundary, null, React.createElement(mounted)));
+}
+
+function renderFallback(source) {
+  resetRoot();
+  var pre = document.createElement('pre');
+  pre.className = 'fallback';
+  pre.textContent = source;
+  root.appendChild(pre);
+}
+
+/* ---------- message loop ---------- */
+
+var renderSeq = 0;
+
+function onParentMessage(d) {
+  if (!d || d.type !== 'render-artifact' || !d.payload) return;
+  var p = d.payload;
+  var seq = ++renderSeq;
+  currentId = p.id;
+
+  var run;
+  switch (p.artifactType) {
+    case 'text/html':                    run = function () { return renderHtml(p.source); }; break;
+    case 'image/svg+xml':                run = function () { return Promise.resolve(renderSvg(p.source)); }; break;
+    case 'application/vnd.ant.mermaid':  run = function () { return renderMermaid(p.source); }; break;
+    case 'application/vnd.ant.react':    run = function () { return renderReact(p.source); }; break;
+    default:                             run = function () { return Promise.resolve(renderFallback(p.source)); };
+  }
+
+  run().then(function () {
+    if (seq !== renderSeq) return; // a newer render superseded this one
+    reportHeight();
+    if (p.final) post({ type: 'artifact-rendered', id: p.id });
+  }).catch(function (err) {
+    if (seq !== renderSeq) return;
+    // partial sources routinely fail to parse mid-stream; only final failures surface
+    if (p.final) {
+      post({ type: 'artifact-error', id: p.id, message: String(err && err.message || err) });
+    }
+  });
+}
+
+channel.port1.onmessage = function (e) { onParentMessage(e.data); };
+window.addEventListener('message', function (e) { onParentMessage(e.data); });
+
+// handshake: transfer the parent's end of the channel
+window.parent.postMessage({ type: 'shell-ready', frame: FRAME_ID }, '*', [channel.port2]);
+</script>
+</body>
+</html>

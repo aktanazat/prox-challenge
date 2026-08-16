@@ -1,0 +1,1006 @@
+[
+  {
+    "doc": "owner-manual",
+    "page": 1,
+    "png": "pages/owner-manual-p01.png",
+    "topics": [
+      "cover",
+      "product overview",
+      "branding"
+    ],
+    "figures": [
+      {
+        "id": "om-p1-cover",
+        "caption": "Cover photo",
+        "what_it_shows": "Product photo of the Vulcan OmniPro 220 (item 57812) with brand logo, product name, and Harbor Freight contact info."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 2,
+    "png": "pages/owner-manual-p02.png",
+    "topics": [
+      "table of contents",
+      "safety symbols",
+      "warning definitions"
+    ],
+    "figures": [
+      {
+        "id": "om-p2-toc",
+        "caption": "Table of contents + warning symbol legend",
+        "what_it_shows": "Section index (Safety p2, Specifications p7, Controls p8, MIG/Flux-Cored p10, TIG/Stick p24, Welding Tips p34, Maintenance p41, Parts List p46, Warranty p48) and DANGER/WARNING/CAUTION/NOTICE definitions."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 3,
+    "png": "pages/owner-manual-p03.png",
+    "topics": [
+      "safety",
+      "fume and gas safety",
+      "arc ray safety"
+    ],
+    "figures": [
+      {
+        "id": "om-p3-hazards",
+        "caption": "Inhalation and arc-ray hazard icons",
+        "what_it_shows": "Triangular hazard icons for fume inhalation and arc ray exposure alongside safety text."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 4,
+    "png": "pages/owner-manual-p04.png",
+    "topics": [
+      "safety",
+      "electrical safety",
+      "fire safety"
+    ],
+    "figures": [
+      {
+        "id": "om-p4-hazards",
+        "caption": "Electric shock and fire hazard icons",
+        "what_it_shows": "Triangular hazard icons for electric shock and fire alongside grounding/GFCI safety text."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 5,
+    "png": "pages/owner-manual-p05.png",
+    "topics": [
+      "safety",
+      "welder use and care",
+      "gas cylinder safety"
+    ],
+    "figures": [
+      {
+        "id": "om-p5-hazards",
+        "caption": "Cylinder explosion hazard icon",
+        "what_it_shows": "Hazard icon accompanying gas-cylinder handling safety rules."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 6,
+    "png": "pages/owner-manual-p06.png",
+    "topics": [
+      "safety symbols",
+      "symbology legend",
+      "grounding",
+      "extension cords"
+    ],
+    "figures": [
+      {
+        "id": "om-p6-symbology",
+        "caption": "Full symbology/units legend",
+        "what_it_shows": "Icon+label legend: Wire Feed (Speed), Workpiece Ground Cable, Torch Cable, Overheat Shutdown Indicator, Cooling Fan, Housing Ground Point, plus unit abbreviations VAC/A/OCV/KVA/IPM/AWG and 5 hazard icons (shock, inhalation, read-manual, fire, arc ray, pacemaker)."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 7,
+    "png": "pages/owner-manual-p07.png",
+    "topics": [
+      "specifications",
+      "duty cycle table 240V",
+      "duty cycle table 120V",
+      "electrical specs",
+      "MIG specs",
+      "TIG specs",
+      "stick specs"
+    ],
+    "figures": [
+      {
+        "id": "om-p7-specs",
+        "caption": "Specifications table (MIG/TIG/Stick)",
+        "what_it_shows": "Three-block table giving Power Input, Current Input at Output, Welding Current Range, Rated Duty Cycles, Maximum OCV, Weldable Materials (+ wire capacity/speed for MIG) for each of MIG, TIG, and Stick at 120V and 240V. Table extraction verified clean; see knowledge/text/owner-manual.md Page 7 table."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 8,
+    "png": "pages/owner-manual-p08.png",
+    "topics": [
+      "front panel controls",
+      "controls",
+      "socket identification"
+    ],
+    "figures": [
+      {
+        "id": "om-p8-frontpanel",
+        "caption": "Front Panel Controls diagram",
+        "what_it_shows": "Labeled callout diagram of the front panel: Wire Feed Power Cable, Power Switch, LCD Display, Right/Left/Control Knobs, Home/Back Buttons, Spool Gun Gas Outlet, MIG Gun/Spool Gun Cable Socket, Negative Socket, Positive Socket, Storage Compartment. The definitive socket-ID reference for the whole manual."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 9,
+    "png": "pages/owner-manual-p09.png",
+    "topics": [
+      "interior controls",
+      "wire feed mechanism",
+      "wire feed tensioner calibration"
+    ],
+    "figures": [
+      {
+        "id": "om-p9-interior",
+        "caption": "Interior Controls diagram",
+        "what_it_shows": "Top-down labeled diagram of the wire feed compartment: Cold Wire Feed Switch, Idler Arm, Wire Feed Mechanism, Wire Spool, Spool Knob, Feed Tensioner, Wire Inlet Liner, Feed Roller Knob, Wire Feed Control Socket, Foot Pedal Socket."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 10,
+    "png": "pages/owner-manual-p10.png",
+    "topics": [
+      "wire spool installation",
+      "1-2 lb spool loading",
+      "door latch"
+    ],
+    "figures": [
+      {
+        "id": "om-p10-spool12",
+        "caption": "1-2 lb Spool Loading diagram",
+        "what_it_shows": "Illustrated steps: open door, place spool on spindle against brake pad (unwind clockwise), replace spacer, secure with wingnut."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 11,
+    "png": "pages/owner-manual-p11.png",
+    "topics": [
+      "10-12 lb spool loading",
+      "spool adapter"
+    ],
+    "figures": [
+      {
+        "id": "om-p11-spool1012",
+        "caption": "10-12 lb Spool Loading diagram",
+        "what_it_shows": "Illustrated steps using the Spool Adapter (pin aligns with spool hole), Spool Knob threaded into adapter, Idler Arm/Feed Tensioner shown released."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 12,
+    "png": "pages/owner-manual-p12.png",
+    "topics": [
+      "feed roller sizing",
+      "wire diameter selection"
+    ],
+    "figures": [
+      {
+        "id": "om-p12-rollers",
+        "caption": "Feed Roller groove sizing diagram (A/B/C/D)",
+        "what_it_shows": "Four-groove feed roller: two V-groove sides for solid-core wire (0.025\" and 0.030\"/0.035\") and two knurled-groove sides for flux-cored wire (0.030\"/0.035\" and 0.045\"); shows removing/flipping the roller via the Feed Roller Knob."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 13,
+    "png": "pages/owner-manual-p13.png",
+    "topics": [
+      "gun cable connector insertion",
+      "wire feed control cable"
+    ],
+    "figures": [
+      {
+        "id": "om-p13-connector",
+        "caption": "Gun Cable Connector insertion \u2014 correct vs incorrect",
+        "what_it_shows": "Side-by-side comparison graphic: 'Incorrect \u2013 Connector not fully inserted' vs 'Correct \u2013 Connector fully inserted' for the MIG Gun cable into the Wire Feed mechanism socket; also the Wire Feed Control Cable keyed-orientation plug."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 14,
+    "png": "pages/owner-manual-p14.png",
+    "topics": [
+      "DCEP MIG polarity setup",
+      "MIG polarity",
+      "rating nameplate",
+      "duty cycle table 240V",
+      "duty cycle table 120V"
+    ],
+    "figures": [
+      {
+        "id": "om-p14-dcep",
+        "caption": "DCEP Solid-Core (gas-shielded) Polarity Setup diagram",
+        "what_it_shows": "Ground Clamp Cable plugs into the NEGATIVE (\u2013) Socket; Wire Feed Power Cable plugs into the POSITIVE (+) Socket, both twisted clockwise to lock. Text: 'Determine which type of shielding gas would be appropriate... Refer to the Settings Chart on the inside of the Welder door.'"
+      },
+      {
+        "id": "om-p14-nameplate",
+        "caption": "IEC 60974-1 rating nameplate illustration",
+        "what_it_shows": "Full rating-plate table repeated on-page: MIG 30A/15.5V\u2013220A/25V range, X=25/60/100% duty rows with I2 (200A/130A/115A) and U2 (24V/20.5V/19.75V) at U1=240V, and 30A/15.5V\u2013140A/21V range with X=40/60/100% (100A/85A/75A, 19V/18.25V/17.75V) at U1=120V; plus I1max/I1eff current-draw figures for MIG, TIG, and Stick side by side."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 15,
+    "png": "pages/owner-manual-p15.png",
+    "topics": [
+      "wire threading",
+      "nozzle",
+      "contact tip",
+      "wire feed setup"
+    ],
+    "figures": [
+      {
+        "id": "om-p15-threading",
+        "caption": "Wire threading diagram",
+        "what_it_shows": "Feeding wire into Wire Inlet Liner and Feed Guide, wire resting in Feed Roller groove, Idler Arm down and Feed Tensioner latched; Nozzle and Contact Tip labeled on MIG Gun."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 16,
+    "png": "pages/owner-manual-p16.png",
+    "topics": [
+      "cold wire feed switch",
+      "rating nameplate"
+    ],
+    "figures": [
+      {
+        "id": "om-p16-coldfeed",
+        "caption": "Cold Wire Feed Switch diagram + nameplate",
+        "what_it_shows": "2-inch feed-through distance callout for the Cold Wire Feed Switch button; IEC rating nameplate table repeated (same data as p14)."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 17,
+    "png": "pages/owner-manual-p17.png",
+    "topics": [
+      "wire feed tensioner calibration",
+      "drive tension check"
+    ],
+    "figures": [
+      {
+        "id": "om-p17-tension",
+        "caption": "Wire tension check diagram",
+        "what_it_shows": "Illustrates pressing the Trigger to feed wire against a wood block 2-3 inches away, incrementally tightening the Feed Tensioner clockwise until the wire bends instead of stalling; tension spec 3-5 for solid wire, 2-3 for flux-cored wire (from text)."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 18,
+    "png": "pages/owner-manual-p18.png",
+    "topics": [
+      "safety",
+      "MIG setup",
+      "basic wire welding intro"
+    ],
+    "figures": [
+      {
+        "id": "om-p18-safety",
+        "caption": "Safety hazard icon set",
+        "what_it_shows": "Row of hazard icons (electric shock, fire, arc ray) beside PPE requirements text for basic wire welding."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 19,
+    "png": "pages/owner-manual-p19.png",
+    "topics": [
+      "duty cycle diagram 120V",
+      "duty cycle diagram 240V",
+      "MIG setup",
+      "ground clamp"
+    ],
+    "figures": [
+      {
+        "id": "om-p19-duty-mig",
+        "caption": "MIG Duty Cycle clock diagrams (120V & 240V)",
+        "what_it_shows": "Two analog clock-face graphics split into welding/resting arcs. 120VAC: 40% Use at 100A / 100% Continuous at 75A = 4 min welding / 6 min resting per 10 min. 240VAC: 25% Use at 200A / 100% Continuous at 115A = 2-1/2 min welding / 7-1/2 min resting per 10 min. Directly answers 'duty cycle MIG 200A 240V'."
+      },
+      {
+        "id": "om-p19-clamp",
+        "caption": "Ground clamp connection diagram",
+        "what_it_shows": "Ground Clamp connected to bare metal on workpiece or a grounded metal bench; note that ground connection depends on desired welding polarity."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 20,
+    "png": "pages/owner-manual-p20.png",
+    "topics": [
+      "MIG synergic settings chart",
+      "front panel controls",
+      "LCD display"
+    ],
+    "figures": [
+      {
+        "id": "om-p20-lcd",
+        "caption": "MIG LCD settings screen mockups",
+        "what_it_shows": "Process-selection screen; Wire Diameter (e.g. .025\")/Material Thickness (e.g. 24Ga) screen set via Left/Right Knob; Auto Weld Settings screen (Left Knob=Wire Feed Speed/Amperage, Right Knob=Voltage) with a white tick mark on the adjustment bar indicating the machine's synergic recommended setting for the chosen wire/thickness."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 21,
+    "png": "pages/owner-manual-p21.png",
+    "topics": [
+      "MIG optional settings",
+      "gas flow setup",
+      "spool gun"
+    ],
+    "figures": [
+      {
+        "id": "om-p21-optional",
+        "caption": "Optional Settings LCD screens + gas connection",
+        "what_it_shows": "Run-In WFS, Inductance, Spot Timer, Recall Setting, Save Setting (5 slots) menu screens; Argon cylinder + regulator + hose connection diagram. SCFH set between 20-30 for MIG per text."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 22,
+    "png": "pages/owner-manual-p22.png",
+    "topics": [
+      "welding technique",
+      "push angle",
+      "drag angle",
+      "CTWD"
+    ],
+    "figures": [
+      {
+        "id": "om-p22-technique",
+        "caption": "MIG gun angle/technique diagrams",
+        "what_it_shows": "Stringer vs weave bead patterns; gun angle for 90\u00b0 butt joints and 45\u00b0 fillet joints; push angle 0-15\u00b0 (solid wire+gas) vs drag angle 0-15\u00b0 (flux-cored, no gas); CTWD up to 1/2\" diagram."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 23,
+    "png": "pages/owner-manual-p23.png",
+    "topics": [
+      "duty cycle diagram 120V",
+      "duty cycle diagram 240V",
+      "overheat shutdown indicator",
+      "post-weld shutdown"
+    ],
+    "figures": [
+      {
+        "id": "om-p23-duty-mig2",
+        "caption": "MIG Duty Cycle clocks (repeated, larger) + warning screen",
+        "what_it_shows": "Same 120V/240V duty-cycle clock data as p19, shown larger; LCD 'warning screen' mockup depicting the overheat shutdown indicator; diagram of MIG Gun resting on a concrete slab away from the ground clamp during cool-down."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 24,
+    "png": "pages/owner-manual-p24.png",
+    "topics": [
+      "TIG polarity setup",
+      "TIG setup",
+      "socket identification"
+    ],
+    "figures": [
+      {
+        "id": "om-p24-tig-polarity",
+        "caption": "TIG cable-setup diagram",
+        "what_it_shows": "Explicit on-image labels: Ground Clamp Cable \u2192 POSITIVE Socket; TIG Torch Cable \u2192 NEGATIVE Socket (both twisted clockwise to lock). Foot Pedal Socket (inside welder) and Foot Pedal Cable routing also shown. Directly answers 'TIG polarity + which socket the ground clamp cable plugs into'."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 25,
+    "png": "pages/owner-manual-p25.png",
+    "topics": [
+      "TIG gas setup",
+      "rating nameplate",
+      "power cord connection"
+    ],
+    "figures": [
+      {
+        "id": "om-p25-gas",
+        "caption": "Shielding gas connection diagram + nameplate",
+        "what_it_shows": "4-step diagram: secure 100% Argon cylinder, briefly open/close valve to clear dust, thread Regulator, connect Gas Hose; IEC rating nameplate repeated."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 26,
+    "png": "pages/owner-manual-p26.png",
+    "topics": [
+      "tungsten electrode sharpening",
+      "TIG torch assembly"
+    ],
+    "figures": [
+      {
+        "id": "om-p26-tungsten",
+        "caption": "Tungsten grinding + TIG torch exploded diagram",
+        "what_it_shows": "Grinding diagram: conical tip length = 2.5\u00d7 electrode diameter, grinding direction parallel to electrode. TIG torch exploded view: Collet Body, Ceramic Nozzle, Collet, Back Cap; electrode protrudes 1/8\"-1/4\" beyond nozzle."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 27,
+    "png": "pages/owner-manual-p27.png",
+    "topics": [
+      "stick polarity setup",
+      "stick setup",
+      "socket identification"
+    ],
+    "figures": [
+      {
+        "id": "om-p27-stick-polarity",
+        "caption": "Stick cable-setup diagram",
+        "what_it_shows": "Explicit on-image labels: Ground Clamp Cable \u2192 NEGATIVE Socket; Electrode Holder Cable \u2192 POSITIVE Socket (both twisted clockwise to lock) \u2014 opposite socket assignment from the TIG diagram on p24. IEC rating nameplate repeated."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 28,
+    "png": "pages/owner-manual-p28.png",
+    "topics": [
+      "safety",
+      "TIG/Stick intro",
+      "PPE"
+    ],
+    "figures": [
+      {
+        "id": "om-p28-intro",
+        "caption": "Basic TIG/Stick welding intro",
+        "what_it_shows": "PPE and practice-weld guidance graphics preceding the TIG/Stick procedures."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 29,
+    "png": "pages/owner-manual-p29.png",
+    "topics": [
+      "duty cycle diagram 120V",
+      "duty cycle diagram 240V",
+      "TIG duty cycle",
+      "stick duty cycle",
+      "ground clamp"
+    ],
+    "figures": [
+      {
+        "id": "om-p29-duty-tig-stick",
+        "caption": "TIG and Stick Duty Cycle clock diagrams",
+        "what_it_shows": "TIG 240V: 30% Use at 175A/100% Continuous at 105A = 3 min welding/7 min resting. TIG 120V: 40% Use at 125A/100% Continuous at 90A = 4 min welding/6 min resting. Stick 240V: 25% Use at 175A/100% Continuous at 100A = 2-1/2 min welding/7-1/2 min resting. Stick 120V: 40% Use at 80A/100% Continuous at 60A = 4 min welding/6 min resting. Plus ground-clamp connection diagram."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 30,
+    "png": "pages/owner-manual-p30.png",
+    "topics": [
+      "TIG settings screen",
+      "TIG setup"
+    ],
+    "figures": [
+      {
+        "id": "om-p30-tig-lcd",
+        "caption": "TIG LCD settings screen mockups",
+        "what_it_shows": "Process/polarity/gas screen (SCFH 10-25); Rod Diameter/Material Thickness screen; Auto Weld Settings screen (Left Knob=amperage, Right Knob=torch energize ON)."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 31,
+    "png": "pages/owner-manual-p31.png",
+    "topics": [
+      "TIG welding technique",
+      "TIG optional settings"
+    ],
+    "figures": [
+      {
+        "id": "om-p31-tig-technique",
+        "caption": "TIG optional settings screen",
+        "what_it_shows": "Recall Setting / Save Setting (5 slots) menu screens."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 32,
+    "png": "pages/owner-manual-p32.png",
+    "topics": [
+      "stick settings screen",
+      "stick setup"
+    ],
+    "figures": [
+      {
+        "id": "om-p32-stick-lcd",
+        "caption": "Stick LCD settings screen mockups",
+        "what_it_shows": "Process/polarity screen; Electrode Type screen; Electrode Diameter/Material Thickness screen; Auto Weld Settings screen (Left Knob=amperage, Right Knob=electrode holder energize ON)."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 33,
+    "png": "pages/owner-manual-p33.png",
+    "topics": [
+      "stick optional settings",
+      "hot start",
+      "arc force"
+    ],
+    "figures": [
+      {
+        "id": "om-p33-stick-optional",
+        "caption": "Stick optional settings screen",
+        "what_it_shows": "Hot Start / Arc Force / Recall Setting / Save Setting menu screens."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 34,
+    "png": "pages/owner-manual-p34.png",
+    "topics": [
+      "strike test",
+      "weld cleaning",
+      "chipping hammer"
+    ],
+    "figures": [
+      {
+        "id": "om-p34-striketest",
+        "caption": "Strike Test + weld cleaning diagram",
+        "what_it_shows": "Vise-clamped scrap struck with dead-blow hammer: GOOD WELD bends without breaking; POOR WELD snaps/cracks at the weld. Chipping Hammer + Wire Brush cleaning diagram."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 35,
+    "png": "pages/owner-manual-p35.png",
+    "topics": [
+      "weld diagnosis photos \u2014 undercut/burn-through",
+      "weld penetration diagram",
+      "MIG heat control"
+    ],
+    "figures": [
+      {
+        "id": "om-p35-heatcontrol",
+        "caption": "Wire Weld heat-control 3-panel diagram",
+        "what_it_shows": "Line-art cross-sections: EXCESS PENETRATION/BURN-THROUGH ('too hot') vs PROPER PENETRATION ('ideal heat') vs INADEQUATE PENETRATION ('not hot enough'), with lettered fixes (a-h: current, travel speed, wire feed speed, CTWD)."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 36,
+    "png": "pages/owner-manual-p36.png",
+    "topics": [
+      "weld diagnosis photos \u2014 burn-through",
+      "weld not adhering",
+      "bend at joint",
+      "coat of slag"
+    ],
+    "figures": [
+      {
+        "id": "om-p36-penetration",
+        "caption": "Wire Weld Penetration profile-view diagrams",
+        "what_it_shows": "Line-art profile cross-sections for excess/proper/inadequate penetration; separate diagrams for Weld Not Adhering Properly, Bend at Joint, and Coat of Slag Over Weld (partially chipped away to show weld)."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 37,
+    "png": "pages/owner-manual-p37.png",
+    "topics": [
+      "weld diagnosis photos \u2014 porosity",
+      "weld diagnosis photos \u2014 burn-through",
+      "weld diagnosis photos \u2014 crooked bead",
+      "weld diagnosis photos \u2014 spatter"
+    ],
+    "figures": [
+      {
+        "id": "om-p37-porosity",
+        "caption": "Wire Weld \u2013 Porosity (line-art, top view)",
+        "what_it_shows": "VERIFIED via vision: flat-gray vector illustration (NOT a photo) \u2014 a stylized rippled bead with ~10-15 small round white dots (each ~5-10% of bead width) scattered irregularly across the dark bead surface, representing gas-cavity porosity. Caption: 'Small cavities or holes in the bead.' Causes: incorrect polarity, insufficient/incorrect shielding gas, dirty workpiece/wire, inconsistent travel speed, long CTWD."
+      },
+      {
+        "id": "om-p37-burnthrough",
+        "caption": "Wire Weld \u2013 Burn-Through (line-art)",
+        "what_it_shows": "A large irregular white hole spanning ~70-90% of the bead width, representing base material melted away."
+      },
+      {
+        "id": "om-p37-crooked",
+        "caption": "Wire Weld \u2013 Crooked/Wavy Bead (line-art)",
+        "what_it_shows": "A meandering, non-linear rippled bead path (top view)."
+      },
+      {
+        "id": "om-p37-spatter",
+        "caption": "Wire Weld \u2013 Excessive Spatter (line-art)",
+        "what_it_shows": "Many small dark irregular specks scattered on the plate around (not on) the bead."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 38,
+    "png": "pages/owner-manual-p38.png",
+    "topics": [
+      "weld diagnosis photos \u2014 undercut/burn-through",
+      "stick heat control",
+      "stick weld examples"
+    ],
+    "figures": [
+      {
+        "id": "om-p38-heatcontrol",
+        "caption": "Stick Weld heat-control 3-panel diagram",
+        "what_it_shows": "Mirrors p35 for Stick: excess/proper/inadequate penetration line-art, fixes = increase/decrease current + weld speed. Additional strip of 7 small example diagrams: Good Weld, Current Too Low, Current Too High, Weld Speed Too Fast, Weld Speed Too Slow, Arc Length Too Short, Arc Length Too Long, each with a 'TO CORRECT' callout."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 39,
+    "png": "pages/owner-manual-p39.png",
+    "topics": [
+      "weld diagnosis photos \u2014 burn-through",
+      "stick weld not adhering",
+      "stick bend at joint"
+    ],
+    "figures": [
+      {
+        "id": "om-p39-penetration",
+        "caption": "Stick Weld Penetration profile-view diagrams",
+        "what_it_shows": "Mirrors p36 for Stick: excess/proper/inadequate penetration profile cross-sections; Weld Not Adhering Properly and Bend at Joint diagrams."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 40,
+    "png": "pages/owner-manual-p40.png",
+    "topics": [
+      "weld diagnosis photos \u2014 porosity",
+      "weld diagnosis photos \u2014 burn-through",
+      "weld diagnosis photos \u2014 crooked bead",
+      "weld diagnosis photos \u2014 spatter",
+      "coat of slag"
+    ],
+    "figures": [
+      {
+        "id": "om-p40-porosity",
+        "caption": "Stick Weld \u2013 Porosity (line-art, top view)",
+        "what_it_shows": "VERIFIED via vision: flat-gray vector illustration (NOT a photo), labeled 'TOP VIEW' \u2014 same small-scattered-dot visual convention as the MIG/wire porosity diagram on p37 (~15-25 small irregular dots/ovals, ~5-15% of bead width, scattered pseudo-randomly), NOT a visually distinct 'large clustered cavity' signature. Caption: 'Small cavities or holes in the bead.' Causes: dirty workpiece/fill material, inconsistent welding speed."
+      },
+      {
+        "id": "om-p40-slag",
+        "caption": "Stick Weld \u2013 Coat of Slag Over Weld (line-art)",
+        "what_it_shows": "Dark rough-textured slag on the left portion, chipped-away clean rippled weld exposed on the right, with a tool tip contacting the bead."
+      },
+      {
+        "id": "om-p40-crooked",
+        "caption": "Stick Weld \u2013 Crooked/Wavy Bead (line-art)",
+        "what_it_shows": "Meandering bead centerline, top view."
+      },
+      {
+        "id": "om-p40-spatter",
+        "caption": "Stick Weld \u2013 Excessive Spatter (line-art)",
+        "what_it_shows": "Many small dark specks scattered around a straight rippled bead."
+      },
+      {
+        "id": "om-p40-burnthrough",
+        "caption": "Stick Weld \u2013 Burn-Through (line-art)",
+        "what_it_shows": "Single large irregular white hole spanning most of the bead height."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 41,
+    "png": "pages/owner-manual-p41.png",
+    "topics": [
+      "maintenance",
+      "nozzle inspection",
+      "contact tip inspection",
+      "LCD screen cover"
+    ],
+    "figures": [
+      {
+        "id": "om-p41-nozzle",
+        "caption": "Nozzle/Contact Tip inspection diagram",
+        "what_it_shows": "Labeled Nozzle and Contact Tip on the MIG Gun for cleaning/inspection steps."
+      },
+      {
+        "id": "om-p41-lcdcover",
+        "caption": "LCD Screen Cover replacement diagram",
+        "what_it_shows": "Pry frame off Display with a flathead screwdriver, insert new Screen Cover into Screen Frame with gap facing down, reinsert frame top-first."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 42,
+    "png": "pages/owner-manual-p42.png",
+    "topics": [
+      "troubleshooting matrix",
+      "MIG troubleshooting",
+      "wire feed problems"
+    ],
+    "figures": [
+      {
+        "id": "om-p42-table",
+        "caption": "MIG/Flux-Cored Troubleshooting table (part 1)",
+        "what_it_shows": "Problem/Possible Causes/Likely Solutions table: Wire Feed Motor Runs but Wire Does Not Feed Properly; Wire Creates a Bird's Nest; Wire Stops During Welding; Welding Arc Not Stable; Weak Arc Strength. Table extraction verified clean; see knowledge/text/owner-manual.md Page 42 table."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 43,
+    "png": "pages/owner-manual-p43.png",
+    "topics": [
+      "troubleshooting matrix",
+      "MIG troubleshooting",
+      "weld diagnosis photos \u2014 porosity"
+    ],
+    "figures": [
+      {
+        "id": "om-p43-table",
+        "caption": "MIG/Flux-Cored Troubleshooting table (part 2)",
+        "what_it_shows": "Continues table: Welder Does Not Function When Switched On; LCD Display Does Not Light; Wire Feeds but Arc Does Not Ignite; Porosity in the Weld Metal (6 causes incl. empty gas bottle, wrong gas flow, dirty workpiece, CTWD too far, incorrect polarity, dirty wire). Table extraction verified clean; see knowledge/text/owner-manual.md Page 43 table."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 44,
+    "png": "pages/owner-manual-p44.png",
+    "topics": [
+      "troubleshooting matrix",
+      "TIG troubleshooting",
+      "stick troubleshooting"
+    ],
+    "figures": [
+      {
+        "id": "om-p44-table",
+        "caption": "TIG/Stick Troubleshooting table",
+        "what_it_shows": "Problem/Possible Causes/Likely Solutions table: Welder Does Not Function When Switched On; LCD Display Does Not Light; Weak Arc Strength; Welding Arc Not Stable. Table extraction verified clean; see knowledge/text/owner-manual.md Page 44 table."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 45,
+    "png": "pages/owner-manual-p45.png",
+    "topics": [
+      "wiring schematic",
+      "electrical diagram",
+      "IGBT inverter",
+      "PFC"
+    ],
+    "figures": [
+      {
+        "id": "om-p45-schematic",
+        "caption": "Wiring Schematic (rotated 90\u00b0 on page)",
+        "what_it_shows": "VERIFIED via vision: hybrid schematic, power section component-level, control section block-level. Power path: AC input (K1, AC1/AC2/G, 120-240V/50/60Hz) \u2192 rectifier bridges \u2192 PFC (with IGBT) \u2192 DC bus \u2192 IGBT inverter (2 half-bridge pairs) \u2192 transformer T1 (T60*30*28) \u2192 secondary rectifier diodes \u2192 OUT+ (through Hall current sensor)/OUT-. Control path: 24V aux \u2192 CN5 (up to pin 34) \u2192 MCU BOARD \u2192 CN6 (4-pin) \u2192 LCD SCREEN; MCU also drives CN7/CN8/CN3/CN4 \u2192 FAST WIRE FEED SWITCH, 2x SOLENOID VALVE, WIRE FEEDER motor; REMOTE BOARD (CN1/CN2/CN3) \u2192 2x AVIATION PLUG connectors; FAN/FAN2 (2-pin each) \u2192 cooling fans."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "owner-manual",
+    "page": 46,
+    "png": "pages/owner-manual-p46.png",
+    "topics": [
+      "parts list",
+      "replacement parts"
+    ],
+    "figures": [
+      {
+        "id": "om-p46-parts",
+        "caption": "Parts List table (61 rows)",
+        "what_it_shows": "Part #/Description/Qty table for all 61 numbered components (Right Cover through 240 VAC Power Cord). Table extraction verified clean; see knowledge/text/owner-manual.md Page 46 table."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 47,
+    "png": "pages/owner-manual-p47.png",
+    "topics": [
+      "assembly diagram",
+      "exploded view",
+      "parts list"
+    ],
+    "figures": [
+      {
+        "id": "om-p47-exploded",
+        "caption": "Assembly Diagram (exploded view)",
+        "what_it_shows": "Full exploded-view line drawing with all part numbers 1-61 as circled leader-line callouts. Cluster layout (approximate, vision-inferred from drawing shapes, no part-name text on the diagram itself): top row 1-7 = outer enclosure/cover shell with vents, carry handle, latch hardware; upper-right 61 = power cord with molded plug; right column 43-60 = rear panel/fan grille, fan, heat sinks (finned blocks), circuit boards with relays/transformers, small connectors; left column 16-26 = MIG torch/gun assembly with coiled cable, front panel/control-panel frame, front bezel with vents; mid-upper 8-15 = wire-feed drive assembly with tensioner, wire spool, chassis baseplate with transformer/inductor; bottom row 27-42 = clamp/adapter pieces, bus bars/rods, internal chassis divider, circuit boards, sheet-metal covers; center = internal chassis with transformer, fan cutout, mounted PCBs, output terminals, hardware (33-35). Each numbered callout maps to the identically-numbered row in the Parts List table on page 46."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "owner-manual",
+    "page": 48,
+    "png": "pages/owner-manual-p48.png",
+    "topics": [
+      "warranty",
+      "safety"
+    ],
+    "figures": [
+      {
+        "id": "om-p48-warranty",
+        "caption": "Warranty / back cover",
+        "what_it_shows": "Harbor Freight Tools 90-Day Limited Warranty text, manufacturer address (26677 Agoura Road, Calabasas, CA 91302), support phone."
+      }
+    ],
+    "critical": false
+  },
+  {
+    "doc": "quick-start",
+    "page": 1,
+    "png": "pages/quick-start-p01.png",
+    "topics": [
+      "wire feed tensioner calibration",
+      "spool loading",
+      "MIG gun handling",
+      "quick reference"
+    ],
+    "figures": [
+      {
+        "id": "qs-p1-spool",
+        "caption": "2 lb Spool Loading diagram",
+        "what_it_shows": "Wingnut, Spacer, Spindle, Brake Pad labeled on a 2 lb wire spool; note that an Adapter and knob are required for a 10-12 lb spool (full procedure in owner-manual p10-11)."
+      },
+      {
+        "id": "qs-p1-tension",
+        "caption": "Wire feed tension check diagram",
+        "what_it_shows": "Clockwise tensioner knob adjustment with a 2\"-3\" wood-block bend test, matching owner-manual p17 step 27."
+      },
+      {
+        "id": "qs-p1-tip",
+        "caption": "Contact Tip / Nozzle diagram",
+        "what_it_shows": "Labeled Contact Tip and Nozzle with a 2\" reference scale and 'HOLD GUN CLEAR' warning."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "quick-start",
+    "page": 2,
+    "png": "pages/quick-start-p02.png",
+    "topics": [
+      "DCEN flux-cored polarity setup",
+      "DCEP MIG polarity setup",
+      "TIG polarity setup",
+      "stick polarity setup",
+      "quick reference"
+    ],
+    "figures": [
+      {
+        "id": "qs-p2-polarity",
+        "caption": "Cable/polarity setup diagrams for all 4 processes",
+        "what_it_shows": "Condensed cable-routing diagrams: Stick (Ground Clamp\u2192Negative, Electrode Holder\u2192Positive), MIG (Ground Clamp\u2192Negative, Wire Feed Power\u2192Positive), Flux-Cored (note: reverse of MIG \u2014 Ground Clamp\u2192Positive, Wire Feed Power\u2192Negative), TIG (Ground Clamp\u2192Positive, TIG Torch\u2192Negative, plus gas line and foot-pedal socket). Matches the owner-manual's DCEN (p14), DCEP (p14), TIG (p24), and Stick (p27) polarity diagrams."
+      }
+    ],
+    "critical": true
+  },
+  {
+    "doc": "selection-chart",
+    "page": 1,
+    "png": "pages/selection-chart-p01.png",
+    "topics": [
+      "process selection chart",
+      "MIG vs flux-cored comparison",
+      "duty cycle explanation"
+    ],
+    "figures": [
+      {
+        "id": "sc-p1-header",
+        "caption": "'HOW TO CHOOSE A WELDER' header + voltage callout",
+        "what_it_shows": "Title banner and red 'IDENTIFY YOUR INPUT VOLTAGE' callout box."
+      },
+      {
+        "id": "sc-p1-table",
+        "caption": "6-row x 4-process comparison table",
+        "what_it_shows": "Skill level, shielding gas requirement, material type, material thickness, typical applications, and weld cleanliness for FLUX-CORED/MIG/STICK/TIG side by side; full transcription in knowledge/text/selection-chart.md."
+      },
+      {
+        "id": "sc-p1-cards",
+        "caption": "4 black process-summary cards",
+        "what_it_shows": "Bullet-point pros for each process under 'USE THIS WELDING PROCESS'."
+      },
+      {
+        "id": "sc-p1-sidebar",
+        "caption": "'MIG or FLUX CORED?' checklist + Duty Cycle Example",
+        "what_it_shows": "9-row checklist table with checkmarks under MIG or FLUX CORED; generic duty-cycle worked example (165A @ 30% = 3 min welding/7 min resting) explaining the duty-cycle concept (not this machine's specific rated values)."
+      }
+    ],
+    "critical": true
+  }
+]

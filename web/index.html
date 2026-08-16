@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OmniPro 220 Technical Expert — Vulcan</title>
+<meta name="description" content="Multimodal technical expert for the Vulcan OmniPro 220 welder. Setup, settings, weld diagnosis and maintenance, grounded in the machine's own manuals.">
+<meta name="theme-color" content="#0b0c0e">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%230b0c0e'/%3E%3Cpath d='M7 7h6l3 12 3-12h6l-7 20h-4z' fill='%23ff6a00'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/web/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <h1 class="brand">
+    <span class="brand-mark" aria-hidden="true">V</span>
+    <span class="brand-name">VULCAN <strong>OMNIPRO 220</strong></span>
+    <span class="brand-sub">Technical Expert</span>
+  </h1>
+  <div class="link-status" role="status" aria-live="polite">
+    <span class="dot" id="status-dot" data-state="connecting"></span>
+    <span class="status-text mono" id="status-text">LINKING</span>
+  </div>
+</header>
+
+<main class="layout">
+
+  <section class="chat" aria-label="Conversation">
+    <div class="messages" id="messages">
+      <div class="chat-empty" id="chat-empty">
+        <p class="chat-empty-title">OmniPro 220 on the bench.</p>
+        <p class="chat-empty-sub">Ask about setup, wire and gas selection, machine settings, weld
+        defects or maintenance. Answers come from the machine's own manuals — with the pages,
+        diagrams and charts to back them up.</p>
+      </div>
+    </div>
+    <div class="composer">
+      <div class="suggestions" id="suggestions" role="group" aria-label="Suggested questions"></div>
+      <div class="input-row">
+        <textarea id="input" rows="1" placeholder="Ask about setup, settings, weld defects…"
+                  aria-label="Message the technical expert" autocomplete="off"></textarea>
+        <div class="input-actions">
+          <button id="mic-btn" class="icon-btn" aria-label="Dictate message" aria-pressed="false" title="Dictate">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7.25" y="2.5" width="5.5" height="9" rx="2.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5M7 17.5h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button id="upload-btn" class="icon-btn" aria-label="Upload a photo of your weld" title="Upload weld photo">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="5" width="15" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 5l1.2-2h3.6L13 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10.5" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          </button>
+          <button id="tts-btn" class="icon-btn" aria-label="Read replies aloud" aria-pressed="false" title="Read replies aloud">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5v5h3l4 3.5v-12L6 7.5H3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13 7a4.2 4.2 0 0 1 0 6M15.5 5a7.5 7.5 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <button id="send-btn" class="send-btn" aria-label="Send message">
+            SEND
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10h13M12 5.5L16.5 10 12 14.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <input type="file" id="file-input" accept="image/*" hidden>
+      <p class="composer-note">AI assistance — verify safety-critical steps against the owner's
+      manual before welding.</p>
+    </div>
+  </section>
+
+  <section class="workbench" aria-label="Workbench">
+    <div class="panel machine-panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Machine</h2>
+        <div class="panel-tools">
+          <button id="machine-reset" class="text-btn" title="Resume idle orbit">RESET VIEW</button>
+          <button id="machine-toggle" class="text-btn" aria-expanded="true" aria-controls="machine-body">COLLAPSE</button>
+        </div>
+      </div>
+      <div class="machine-body" id="machine-body">
+        <div class="machine-canvas" id="machine-canvas" role="img"
+             aria-label="Interactive 3D model of the Vulcan OmniPro 220 welder. Drag to orbit."></div>
+      </div>
+    </div>
+
+    <div class="panel artifacts-panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Artifacts</h2>
+        <span class="panel-count mono" id="artifact-count" hidden></span>
+      </div>
+      <div class="artifact-stack" id="artifact-stack">
+        <p class="stack-empty" id="stack-empty">Charts, diagrams and machine views produced by the
+        expert appear here.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lightbox-close" id="lightbox-close" aria-label="Close image">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <img id="lightbox-img" alt="">
+</div>
+
+<script type="module" src="/web/machine.js"></script>
+<script type="module" src="/web/app.js"></script>
+</body>
+</html>
