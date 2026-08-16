@@ -1,0 +1,36 @@
+# Transcript: Here's What NO ONE Will Tell You About Harbor Freight's "Best" Welders....
+
+- Title: Here's What NO ONE Will Tell You About Harbor Freight's "Best" Welders....
+- Channel: The Questionable Garage
+- URL: https://www.youtube.com/watch?v=rwH3yoSHTmQ
+- Published: 2022-05-05
+- Duration: 33:59
+- Captured: 2026-08-15 (yt-dlp 2026.03.17 auto-generated English captions)
+- Note: 34-min video; transcript condensed (banter/intro trimmed, technical content kept verbatim) to respect corpus size budget — full auto-captions available via the URL above if needed
+
+---
+
+[00:00] Jared ("Wrench Every Day") intros a Harbor Freight tool-series episode: a welder shootout. Harbor Freight sent him a full welding cabinet, consumables, the Mig Max 215 inverter MIG, the TIG 205, and a Titanium Plasma 45 — he's adding these to his shop. [banter/reveal bit condensed]
+
+[02:00] Contenders on screen: the HF/Vulcan lineup (welding cabinet, Mig Max inverter, TIG 205, Titanium Plasma 45) vs. his own **Millermatic 211** (inverter, bought used at a shop-manager job, built race-car parts with it) and a **Lincoln Pro MIG 180** (older transformer machine, "the welder I've been using lately"). "This is what's called an inverter machine and it's what most modern welders are built on... it's a very close comparison to that Mig Max 215." The Lincoln is the odd one out: "everything else in front of us is an inverter machine... whereas this is the old tried and true transformer machine."
+
+[04:00] States his terms up front: no non-disparagement clause from Harbor Freight — "if it's not good and I don't like it I can be honest about it."
+
+[06:30] Cabinet/consumables walkthrough: a fresh 10 lb spool of .030 mild steel wire pre-fed through the Mig gun with a cold-feed button (full-speed feed with no welding current, for re-threading). Two gas bottles live in the cabinet: CO2/argon mix for MIG, pure argon for TIG (empty, unrefilled since no TIG yet). MIG connections stay plugged in permanently; plasma torch and TIG connect via quick screw/turn fittings. Two complaints: the aluminum TIG rod isn't well protected in its packaging ("just dropping it down it busted out the bottom") vs. the steel rods which ship rubber-capped on both ends. Verdict on the cabinet: "it rolls well, drawers close well, put together really really simply... it's a perk."
+
+[10:30] **Inverter vs. transformer explainer (his most information-dense segment).** Transformer machines (like the Lincoln): oldest tech, simple, very robust, "work for a very long time," run hot because components are big and don't dissipate heat, but tolerate dirty/wet/dusty shop environments well. Roughly 60% power efficiency by his research. Inverter machines (Vulcan Mig Max / Titanium / Millermatic): still contain a transformer, but convert incoming 60 Hz up to very high switching frequency ("up to a million hertz" — his rough figure) via a heavily computer-controlled switch bank, letting them shrink size while boosting amperage range. Most inverters can dual-plug 110/220 (the Lincoln here is 220-only, or purchase-separate for 110). Efficiency rating "in the 90 range." Downsides: circuit boards are fully potted (sealed) so a single failed 30-cent part means replacing the whole board; heavy fan-driven airflow needed for cooling means they clog fast in a dusty/grinding-dust shop and need regular cleaning. Weight: inverters can run under 50 lb vs. ~100+ lb for a comparable transformer machine — relevant if the welder needs to be portable rather than cart-mounted. Multi-process inverters (MIG/stick/TIG in one box, steel/stainless only, no aluminum AC) trade capability breadth for per-process compromise: "if you have a machine trying to do everything you're making some compromises to get it all in one machine."
+
+[17:30] **Pricing at time of filming:** Vulcan Mig Max line ≈ $850–899; Titanium (budget inverter) line ≈ $600; his opinion — don't buy a welder under $400 for anything structural. Millermatic 211 was $2200 new (now ~$1850) plus $150 for the cart — "do I believe this Miller is worth more than a thousand dollars more than the Vulcan inverter machine? No... I think with most of these inverter machines you're seeing most of them come from the same factories."
+
+[19:30] Randy Gronholdt (GRC Fabrication, "an old-school Miller guy," lifelong welder) is brought in to weld a foot of bead on each machine using **only the listed factory/auto-set settings** — "we'll just start out with the listed specs... obviously once you learn the machine you want to tweak a little from there, but that'll give us a good baseline." First up, Lincoln Pro MIG 180. Randy's read on the Lincoln's factory setting: "a little bit cold... but that was pretty much spot on. Good setting. It's not a bad run on a machine."
+
+[23:00] Switch to the Millermatic 211 — same gas bottle, same extension cord, same wire size, deliberately controlled comparison. Randy notes the Miller's fan runs continuously vs. cycling on/off; he backs the wire speed down "quite a bit" from the machine's suggested auto-set number because "this machine... has got considerably more power, which means it's burning wire up quicker." On the Miller's auto-set feature specifically: "it's a cool feature for guys that are learning or new to it, but it's hard to teach an old dog [new tricks]... you never learn the right way [manually]."
+
+[25:30] Switch to the **Vulcan Mig Max 215**: run slightly more heat, slightly less wire speed than its own listed setting. Both hosts immediately notice it behaves like a TIG machine — it has **post-flow**: "you stop welding and the gas keeps going for a second... it's just a little weird to get used to because I've never used a MIG machine that did that." They also flag **pre-flow** later (gas already flowing before the arc starts, unlike the Lincoln/Miller which fire gas with the arc) — "that's something you find more in a TIG machine... it becomes very important... when you're welding aluminum." Jared, in a mid-video future-self cutaway: confirms the pre/post-flow "worked incredibly well to keep that sheet metal cool" and let him "burn through some small thin sheet metal work faster than I normally would have."
+
+[28:00] **Verdicts, no-budget-constraint vs. budget-constrained:**
+> "No money aside, I'd have to go for the Miller... Miller's service history is phenomenal, they stand behind their machines for a long, long, long time." — Randy
+> "With money in mind I would definitely take that [Vulcan] machine... it's a fantastic machine, it really is. I'm pleasantly surprised by it, and the price point is phenomenal." — Randy
+Jared, on his own hands-on impression running the Vulcan gun: "the Vulcan just... felt really comfortable out of the hand right away." He flags the **consumables** as Tweco-style ("marked Tweco style... it's a shared consumable, not a Harbor-Freight-only thing, you can get it from any welding supply") and the **ground clamp** as unexpectedly good: "nice, high-quality four-gauge cable... that was a cool thing that we were both impressed with... for $900 it kind of punches well above its weight class."
+
+[33:00] Closing recommendation: "if you're a diehard Miller fan, spend a lot more money, otherwise you can probably get by just great with the Harbor Freight." [outro banter condensed]
