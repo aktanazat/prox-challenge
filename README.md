@@ -60,6 +60,12 @@ Extraction notes that mattered:
 
 - **Manual figures**: the agent embeds the actual page image at the point in the answer where you need to look at it, and citations like `[manual p.24]` deep-link to the original PDF at that page (`/files/owner-manual.pdf#page=24`).
 - **3D machine view**: a stylized OmniPro 220 built in three.js with nine named hotspots (sockets, polarity terminals, wire feed, tension knob, spool, panel, power switch, gas inlet). When the agent needs to point at the machine — "which socket does the ground clamp go in?" — it emits a `machine-view` artifact and the camera tweens to the target with a pulsing highlight and label.
+- **3D guided tutorials**: for hands-on procedures the agent authors a step-by-step choreography as JSON (`vulcan.tutorial` artifact) against a fixed verb/part vocabulary — grab, insert-with-twist, thread, rotate, open — and a stylized welding-glove hand performs it on the machine: camera moves, part manipulation, captions with page citations, TTS narration, and a scrubber (prev/next/replay/speed). Tutorials are generated per question, not pre-baked clips.
+- **Settings twin**: settings recommendations arrive as a `vulcan.panel-state` artifact — the 3D machine's LCD and knobs configure themselves to the recommendation, so you copy a configured machine instead of numbers.
+- **Ask by touching**: every hotspot on the 3D machine is clickable — "What is this?" and "Show me how" send the part straight into the conversation.
+- **Practice mode**: the agent quizzes you ("show me where the ground clamp goes for TIG"), you answer by clicking the machine, and it grades you and corrects with the hand.
+- **Garage mode**: hands-free toggle — continuous dictation, auto-spoken answers, larger captions. For when your gloves are on.
+- **Job memory**: describe your job once ("1/8 in angle iron, outdoors") and every later answer is conditioned on it, shown as a `JOB:` card.
 - **Interactive artifacts**: Mermaid flowcharts, self-drawn SVG diagrams, and React components (duty-cycle calculator, settings configurator) stream into sandboxed iframes (`sandbox="allow-scripts"`, opaque origin, 5 s render watchdog). React artifacts run through Babel with an esm.sh import map (React 18, recharts, lucide-react); all table data inside an artifact is hardcoded from the manual with page citations visible in the UI.
 - **Weld photo diagnosis**: upload a photo of your bead; the agent reads it, compares against the manual's defect illustrations (p.35–40), names the defect, and gives the causes/fixes from the troubleshooting matrix.
 - **Voice**: dictation in (Web Speech API) and optional spoken answers out, sentence-by-sentence as the response streams. Both browser-native, zero API cost.
@@ -70,6 +76,10 @@ Extraction notes that mattered:
 - "What polarity setup do I need for TIG? Which socket does the ground clamp go in?" — TIG is the reverse of Stick (ground clamp → **positive** socket); the 3D machine focuses the socket and the p.24 diagram is embedded.
 - "I'm getting porosity in my flux-cored welds. What should I check?" — troubleshooting matrix row plus the flux-core polarity gotcha (DCEN, opposite of MIG), usually with a flowchart artifact.
 - "Walk me through the wiring schematic." — the agent reads the schematic PNG with vision and explains the AC → PFC → IGBT inverter → transformer → output topology.
+- "Teach me how to set up flux-core welding from scratch" — the agent authors a multi-step 3D tutorial: the glove hand plugs the cables DCEN, opens the feed bay, threads the wire, and sets the tensioner, narrated step by step.
+- "What settings should I use for MIG on 1/8 in mild steel at 240V?" — the virtual front panel configures itself (LCD + knobs), with an honest note that the machine is synergic and the manual prints no wire-speed table — the agent refuses to invent one.
+- Click the tension knob on the 3D machine → "What is this?" — the part explains itself in context.
+- Toggle PRACTICE and let it quiz you on socket locations; answer by clicking the machine.
 - Ask an underspecified question ("what settings should I use?") — it asks one clarifying question instead of guessing.
 
 ## Design decisions

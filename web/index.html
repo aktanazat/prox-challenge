@@ -27,6 +27,13 @@
     <span class="brand-name">VULCAN <strong>OMNIPRO 220</strong></span>
     <span class="brand-sub">Technical Expert</span>
   </h1>
+  <div class="mode-controls">
+    <span class="garage-mic mono" id="garage-mic" hidden role="status" aria-label="Garage mode microphone">
+      <span class="gm-dot" aria-hidden="true"></span>MIC
+    </span>
+    <button id="garage-toggle" class="text-btn" aria-pressed="false" hidden
+            title="Hands-free: continuous voice input, spoken replies">GARAGE MODE</button>
+  </div>
   <div class="link-status" role="status" aria-live="polite">
     <span class="dot" id="status-dot" data-state="connecting"></span>
     <span class="status-text mono" id="status-text">LINKING</span>
@@ -75,7 +82,10 @@
     <div class="panel machine-panel">
       <div class="panel-head">
         <h2 class="panel-title">Machine</h2>
+        <span class="practice-chip mono" id="practice-chip" hidden>PRACTICE</span>
         <div class="panel-tools">
+          <button id="practice-toggle" class="text-btn" aria-pressed="false"
+                  title="Quiz mode — the expert asks, you click the part">PRACTICE</button>
           <button id="machine-reset" class="text-btn" title="Resume idle orbit">RESET VIEW</button>
           <button id="machine-toggle" class="text-btn" aria-expanded="true" aria-controls="machine-body">COLLAPSE</button>
         </div>
@@ -83,6 +93,31 @@
       <div class="machine-body" id="machine-body">
         <div class="machine-canvas" id="machine-canvas" role="img"
              aria-label="Interactive 3D model of the Vulcan OmniPro 220 welder. Drag to orbit."></div>
+      </div>
+      <div class="tutorial-player" id="tutorial-player" role="group" aria-label="Guided tutorial player" hidden>
+        <div class="tp-head">
+          <span class="tp-title" id="tp-title"></span>
+          <span class="tp-step mono" id="tp-step" aria-live="polite"></span>
+        </div>
+        <p class="tp-caption" id="tp-caption" aria-live="polite"></p>
+        <p class="tp-note" id="tp-note" role="status" hidden></p>
+        <div class="tp-controls">
+          <button id="tp-prev" class="icon-btn tp-btn" aria-label="Previous step" title="Previous step">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4v12M15.5 4.5L8 10l7.5 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          </button>
+          <button id="tp-play" class="icon-btn tp-btn" aria-label="Pause tutorial" aria-pressed="false" title="Play / pause">
+            <svg class="tp-ico-play" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4.5l9.5 5.5L6 15.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            <svg class="tp-ico-pause" viewBox="0 0 20 20" aria-hidden="true"><path d="M6.5 4.5v11M13.5 4.5v11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <button id="tp-next" class="icon-btn tp-btn" aria-label="Next step" title="Next step">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15 4v12M4.5 4.5L12 10l-7.5 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          </button>
+          <button id="tp-replay" class="icon-btn tp-btn" aria-label="Replay step" title="Replay step">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10a6 6 0 1 1 1.8 4.3M4 10V5.5M4 10h4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button id="tp-speed" class="text-btn mono" aria-label="Playback speed" title="Playback speed">1×</button>
+          <button id="tp-end" class="tp-chip" hidden>↻ Replay tutorial</button>
+        </div>
       </div>
     </div>
 

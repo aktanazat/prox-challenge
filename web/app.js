@@ -107,6 +107,9 @@ function linkifyCitations(rootEl) {
   }
 }
 
+// machine.js reuses the citation-linkifier for tutorial captions
+window.VulcanCite = { linkify: linkifyCitations };
+
 // Inline images: click-to-lightbox; broken sources get an explicit state.
 function upgradeImages(rootEl) {
   for (const img of rootEl.querySelectorAll('img')) {
@@ -361,6 +364,8 @@ function renderSuggestions(items) {
 /* ================= artifacts ================= */
 
 const MACHINE_MIME = 'application/vnd.vulcan.machine-view';
+const TUTORIAL_MIME = 'application/vnd.vulcan.tutorial';
+const PANEL_MIME = 'application/vnd.vulcan.panel-state';
 const REACT_MIME = 'application/vnd.ant.react';
 
 const BADGES = {
@@ -368,7 +373,9 @@ const BADGES = {
   'text/html': 'HTML',
   'image/svg+xml': 'SVG',
   'application/vnd.ant.mermaid': 'MERMAID',
-  [MACHINE_MIME]: 'MACHINE'
+  [MACHINE_MIME]: 'MACHINE',
+  [TUTORIAL_MIME]: 'TUTORIAL',
+  [PANEL_MIME]: 'PANEL'
 };
 
 const artifacts = new Map(); // id -> record
@@ -516,6 +523,31 @@ function getOrCreateArtifact(id, type, title) {
     });
     ui.body.appendChild(link);
     rec.machineLink = link;
+  } else if (type === TUTORIAL_MIME) {
+    const link = document.createElement('button');
+    link.className = 'machine-link tutorial-link';
+    link.innerHTML = '<span class="target">TUTORIAL</span><span class="mv-label">Preparing tutorial…</span>';
+    link.addEventListener('click', () => {
+      machinePanel.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' });
+    });
+    const steps = document.createElement('ol');
+    steps.className = 'tutorial-steps'; // visible when the card is expanded
+    ui.body.append(link, steps);
+    rec.tutorialLink = link;
+    rec.stepsEl = steps;
+  } else if (type === PANEL_MIME) {
+    const link = document.createElement('button');
+    link.className = 'machine-link panel-link';
+    link.innerHTML = '<span class="target">PANEL</span><span class="mv-label">Preparing settings…</span>';
+    link.addEventListener('click', () => {
+      if (rec.panelSpec) applyPanelState(rec.panelSpec);
+    });
+    const cite = document.createElement('p');
+    cite.className = 'panel-cite mono';
+    cite.hidden = true;
+    ui.body.append(link, cite);
+    rec.panelLink = link;
+    rec.citeEl = cite;
   } else {
     makeFrame(rec);
   }
@@ -607,8 +639,8 @@ function onArtifactDelta(ev) {
     rec.ui.source.textContent = rec.source;
     rec.ui.source.hidden = false;
     rec.ui.source.scrollTop = rec.ui.source.scrollHeight;
-  } else if (rec.type === MACHINE_MIME) {
-    // machine views render once, on end
+  } else if (rec.type === MACHINE_MIME || rec.type === TUTORIAL_MIME || rec.type === PANEL_MIME) {
+    // machine views, tutorials and panel states render once, on end
   } else {
     clearTimeout(rec.debounce);
     rec.debounce = setTimeout(() => postRender(rec, false), 150);
@@ -638,6 +670,60 @@ function onArtifactEnd(ev) {
     focusMachine(spec);
     return;
   }
+
+  if (rec.type === TUTORIAL_MIME) {
+    rec.card.classList.remove('streaming');
+    let script = null;
+    try {
+      script = JSON.parse(rec.source.replace(/^\s*```[a-zA-Z]*\s*\n?/, '').replace(/```\s*$/, ''));
+    } catch {
+      script = null;
+    }
+    if (!script || typeof script !== 'object' || !Array.isArray(script.steps) || !script.steps.length) {
+      // malformed payload degrades to a plain code card with an error note
+      rec.ui.source.textContent = rec.source;
+      rec.ui.source.hidden = false;
+      showArtifactError(rec, 'invalid tutorial payload — showing raw source');
+      return;
+    }
+    startTutorial(rec, script);
+    return;
+  }
+  if (rec.type === PANEL_MIME) {
+    rec.card.classList.remove('streaming');
+    let spec = null;
+    try {
+      spec = JSON.parse(rec.source.replace(/^\s*```[a-zA-Z]*\s*\n?/, '').replace(/```\s*$/, ''));
+    } catch {
+      spec = null;
+    }
+    if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
+      // malformed payload degrades to a plain code card with an error note
+      if (rec.panelLink) rec.panelLink.hidden = true;
+      rec.ui.source.textContent = rec.source;
+      rec.ui.source.hidden = false;
+      showArtifactError(rec, 'invalid panel-state payload — showing raw source');
+      return;
+    }
+    if (rec.panelLink) rec.panelLink.hidden = false;
+    rec.panelSpec = spec;
+    if (rec.panelLink) {
+      rec.panelLink.querySelector('.target').textContent = '→ front-panel';
+      rec.panelLink.querySelector('.mv-label').textContent =
+        [spec.process, spec.voltage].filter((s) => typeof s === 'string' && s).join(' · ') || 'Panel settings';
+    }
+    if (rec.citeEl) {
+      const cite = typeof spec.cite === 'string' && spec.cite.trim();
+      rec.citeEl.hidden = !cite;
+      if (cite) {
+        rec.citeEl.textContent = `[${cite}]`;
+        linkifyCitations(rec.citeEl);
+      }
+    }
+    applyPanelState(spec);
+    return;
+  }
+
   postRender(rec, true);
 }
 
@@ -691,9 +777,12 @@ window.addEventListener('message', (e) => {
   handleShellMessage(rec, d);
 });
 
-/* ================= machine view ================= */
+/* ================= machine view + tutorials ================= */
 
 let pendingFocus = null;
+let pendingTutorial = null;
+let pendingPanel = null;
+let tutorialRec = null; // artifact card mirroring the running tutorial
 
 function focusMachine(spec) {
   machinePanel.classList.remove('collapsed');
@@ -707,11 +796,85 @@ function focusMachine(spec) {
   machinePanel.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' });
 }
 
+// Route a panel-state spec into the settings twin (mirrors focusMachine).
+function applyPanelState(spec) {
+  machinePanel.classList.remove('collapsed');
+  machineToggle.setAttribute('aria-expanded', 'true');
+  machineToggle.textContent = 'COLLAPSE';
+  if (window.MachineView && window.MachineView.panelState) {
+    window.MachineView.panelState(spec);
+  } else {
+    pendingPanel = spec;
+  }
+  machinePanel.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' });
+}
+
+// Route a parsed tutorial script into the 3D runtime; same-id updates land
+// here again and restart the player with the new script.
+function startTutorial(rec, script) {
+  tutorialRec = rec;
+  if (rec.tutorialLink) {
+    rec.tutorialLink.querySelector('.mv-label').textContent =
+      typeof script.title === 'string' && script.title ? script.title : 'Guided tutorial';
+  }
+  if (rec.stepsEl) {
+    rec.stepsEl.textContent = '';
+    for (const step of script.steps.slice(0, 12)) {
+      const li = document.createElement('li');
+      li.textContent = (typeof step?.caption === 'string' ? step.caption : '(no caption)')
+        + (typeof step?.cite === 'string' ? ` [${step.cite}]` : '');
+      rec.stepsEl.appendChild(li);
+    }
+    linkifyCitations(rec.stepsEl);
+  }
+  machinePanel.classList.remove('collapsed');
+  machineToggle.setAttribute('aria-expanded', 'true');
+  machineToggle.textContent = 'COLLAPSE';
+  if (window.MachineView && window.MachineView.tutorial) {
+    if (!window.MachineView.tutorial(script)) {
+      rec.ui.source.textContent = rec.source;
+      rec.ui.source.hidden = false;
+      showArtifactError(rec, 'tutorial has no playable steps — showing raw source');
+      return;
+    }
+  } else {
+    pendingTutorial = script;
+  }
+  machinePanel.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' });
+}
+
 document.addEventListener('machineview-ready', () => {
   if (pendingFocus) {
     window.MachineView.focus(pendingFocus);
     pendingFocus = null;
   }
+  if (pendingTutorial) {
+    window.MachineView.tutorial(pendingTutorial);
+    pendingTutorial = null;
+  }
+  if (pendingPanel) {
+    window.MachineView.panelState(pendingPanel);
+    pendingPanel = null;
+  }
+});
+
+// the runtime reports player state; mirror it on the tutorial artifact card
+document.addEventListener('vulcan:tutorial-state', (e) => {
+  if (!tutorialRec || !tutorialRec.tutorialLink) return;
+  const d = e.detail || {};
+  const label = tutorialRec.tutorialLink.querySelector('.target');
+  if (d.ended) label.textContent = '✓ FINISHED';
+  else if (d.playing) label.textContent = `▶ STEP ${d.step}/${d.total}`;
+  else label.textContent = `⏸ STEP ${d.step}/${d.total}`;
+});
+
+// tutorial captions go through the existing TTS path when the toggle is on
+document.addEventListener('vulcan:tutorial-caption', (e) => {
+  if (!tts.enabled || !('speechSynthesis' in window)) return;
+  const caption = e.detail && e.detail.caption;
+  if (typeof caption !== 'string' || !caption) return;
+  speechSynthesis.cancel(); // captions preempt queued reply speech
+  tts.speak(caption);
 });
 
 machineToggle.addEventListener('click', () => {
@@ -722,6 +885,94 @@ machineToggle.addEventListener('click', () => {
 
 machineReset.addEventListener('click', () => {
   if (window.MachineView) window.MachineView.idle();
+});
+
+/* ================= ask-by-touching + practice mode ================= */
+
+const machineCanvasEl = $('machine-canvas');
+const practiceBtn = $('practice-toggle');
+const practiceChip = $('practice-chip');
+let practiceMode = false;
+let popoverEl = null;
+
+function dismissPopover() {
+  if (!popoverEl) return;
+  popoverEl.remove();
+  popoverEl = null;
+}
+
+function popoverAction(label, message) {
+  const b = document.createElement('button');
+  b.className = 'hp-btn';
+  b.textContent = label;
+  b.addEventListener('click', () => {
+    dismissPopover();
+    sendMessage(message);
+  });
+  return b;
+}
+
+function showHotspotPopover(d) {
+  dismissPopover();
+  const pop = document.createElement('div');
+  pop.className = 'hotspot-popover';
+  pop.setAttribute('role', 'dialog');
+  pop.setAttribute('aria-label', d.label);
+  const name = document.createElement('p');
+  name.className = 'hp-name';
+  name.textContent = d.label;
+  const actions = document.createElement('div');
+  actions.className = 'hp-actions';
+  if (d.tutorialActive) {
+    // mid-tutorial clicks answer the running quiz/step — one action only
+    actions.append(popoverAction("That's my answer", `[clicked ${d.id}]`));
+  } else {
+    actions.append(
+      popoverAction('What is this?', `[clicked ${d.id}]`),
+      popoverAction('Show me how', `[clicked ${d.id} — show me]`)
+    );
+  }
+  pop.append(name, actions);
+  machineCanvasEl.appendChild(pop);
+  const half = pop.offsetWidth / 2;
+  const x = Math.min(Math.max(d.x, half + 8), machineCanvasEl.clientWidth - half - 8);
+  const above = d.y - pop.offsetHeight - 16 >= 4;
+  pop.classList.toggle('below', !above);
+  pop.style.left = `${x}px`;
+  pop.style.top = `${above ? d.y - 12 : d.y + 16}px`;
+  popoverEl = pop;
+  pop.querySelector('.hp-btn').focus({ preventScroll: true });
+}
+
+document.addEventListener('vulcan:hotspot-click', (e) => {
+  const d = e.detail || {};
+  if (typeof d.id !== 'string') return;
+  if (practiceMode) {
+    // practice answers forward instantly; the ring flash is the only feedback
+    dismissPopover();
+    if (window.MachineView && window.MachineView.flash) window.MachineView.flash(d.id);
+    sendMessage(`[clicked ${d.id}]`);
+    return;
+  }
+  showHotspotPopover(d);
+});
+
+// click-away and Escape dismiss the popover
+document.addEventListener('pointerdown', (e) => {
+  if (popoverEl && !popoverEl.contains(e.target)) dismissPopover();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') dismissPopover();
+});
+
+practiceBtn.addEventListener('click', () => {
+  practiceMode = !practiceMode;
+  practiceBtn.setAttribute('aria-pressed', String(practiceMode));
+  practiceChip.hidden = !practiceMode;
+  dismissPopover();
+  sendMessage(practiceMode
+    ? '[job] practice mode on — quiz me on physical locations, one question at a time'
+    : '[job] practice mode off');
 });
 
 /* ================= lightbox ================= */
@@ -854,6 +1105,107 @@ if (SR) {
   };
 } else {
   micBtn.hidden = true; // graceful hide when unsupported
+}
+
+/* ================= garage mode (hands-free) ================= */
+// Forces TTS on, listens continuously, auto-sends after a ≥1.2 s pause and
+// scales chat/caption type up. Hidden when SpeechRecognition is unsupported.
+
+const garageBtn = $('garage-toggle');
+const garageMic = $('garage-mic');
+const garage = { on: false, prevTts: false, rec: null, buf: '', timer: 0, calm: 0, errs: 0, fatal: false };
+
+function garageIndicate(state) {
+  garageMic.dataset.state = state;
+}
+
+function startGarageRec() {
+  const rec = new SR();
+  garage.rec = rec;
+  garage.fatal = false;
+  garage.errs = 0;
+  rec.continuous = true;
+  rec.interimResults = true;
+
+  rec.onresult = (e) => {
+    garage.errs = 0;
+    garageIndicate('speaking');
+    clearTimeout(garage.calm);
+    garage.calm = setTimeout(() => {
+      if (garage.on && !garage.fatal) garageIndicate('listening');
+    }, 700);
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) garage.buf += e.results[i][0].transcript;
+    }
+    // any speech activity defers the send until the user pauses ≥1.2 s;
+    // only finalized results ever send — interims never double-send
+    clearTimeout(garage.timer);
+    if (garage.buf.trim()) {
+      garage.timer = setTimeout(() => {
+        const text = garage.buf.trim();
+        garage.buf = '';
+        if (text) sendMessage(text);
+      }, 1200);
+    }
+  };
+  rec.onerror = (e) => {
+    garage.errs += 1;
+    const fatalKind = ['not-allowed', 'service-not-allowed', 'audio-capture'].includes(e.error);
+    if ((fatalKind || garage.errs >= 3) && !garage.fatal) {
+      garage.fatal = true; // stop the restart loop; keep TTS + type scale
+      garageIndicate('error');
+      console.warn('garage mode: speech recognition unavailable —', e.error);
+    }
+  };
+  rec.onend = () => {
+    if (!garage.on || garage.rec !== rec || garage.fatal) return;
+    setTimeout(() => {
+      if (garage.on && garage.rec === rec) {
+        try { rec.start(); } catch { /* already restarting */ }
+      }
+    }, 300);
+  };
+  try {
+    rec.start();
+    garageIndicate('listening');
+    console.info('garage mode: continuous recognition started');
+  } catch (err) {
+    garage.fatal = true;
+    garageIndicate('error');
+    console.warn('garage mode: recognition start failed', err);
+  }
+}
+
+function setGarage(on) {
+  garage.on = on;
+  garageBtn.setAttribute('aria-pressed', String(on));
+  document.body.classList.toggle('garage-mode', on);
+  garageMic.hidden = !on;
+  micBtn.disabled = on; // the garage listener owns the mic while active
+  if (on) {
+    garage.prevTts = tts.enabled;
+    if ('speechSynthesis' in window && !tts.enabled) tts.toggle(); // forced on
+    if (machinePanel.classList.contains('collapsed')) machineToggle.click();
+    startGarageRec();
+  } else {
+    if ('speechSynthesis' in window && tts.enabled !== garage.prevTts) tts.toggle();
+    clearTimeout(garage.timer);
+    clearTimeout(garage.calm);
+    garage.buf = '';
+    const rec = garage.rec;
+    garage.rec = null;
+    if (rec) {
+      try { rec.stop(); } catch { /* already stopped */ }
+    }
+  }
+}
+
+if (SR) {
+  console.info('garage mode: SpeechRecognition available — toggle enabled');
+  garageBtn.hidden = false;
+  garageBtn.addEventListener('click', () => setGarage(!garage.on));
+} else {
+  console.info('garage mode: SpeechRecognition unsupported — toggle hidden');
 }
 
 /* ================= composer ================= */
