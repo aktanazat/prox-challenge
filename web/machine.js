@@ -167,7 +167,7 @@ try {
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+renderer.toneMappingExposure = 1.3;
 container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -187,14 +187,14 @@ controls.maxPolarAngle = Math.PI * 0.55;
 controls.autoRotate = !REDUCED;
 controls.autoRotateSpeed = 0.7;
 
-scene.add(new THREE.HemisphereLight(0x8896a4, 0x0b0c0e, 0.9));
-const key = new THREE.DirectionalLight(0xffffff, 1.7);
+scene.add(new THREE.HemisphereLight(0xc3ccd6, 0x33373c, 1.35));
+const key = new THREE.DirectionalLight(0xffffff, 2.3);
 key.position.set(2, 3, 2.5);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0xaabbc8, 0.4);
+const rim = new THREE.DirectionalLight(0xb8c6d4, 0.9);
 rim.position.set(-2.5, 1.5, -1.5);
 scene.add(rim);
-const bayFill = new THREE.DirectionalLight(0x8896a4, 0.45);
+const bayFill = new THREE.DirectionalLight(0x9aa8b6, 0.85);
 bayFill.position.set(-3, 1.2, 1.8);
 scene.add(bayFill);
 const glow = new THREE.PointLight(ACCENT, 0.3, 5);

@@ -1002,5 +1002,166 @@
       }
     ],
     "critical": true
+  },
+  {
+    "doc": "community",
+    "page": 0,
+    "png": null,
+    "topics": [
+      "synergic preset errors",
+      "10ga 12ga identical bug",
+      "14ga missing preset",
+      "MIG thickness preset gap",
+      "stick 6013 150A too hot",
+      "flux-core presets run hot",
+      "preset trust",
+      "field consensus corrections"
+    ],
+    "critical": true
+  },
+  {
+    "doc": "community",
+    "page": 0,
+    "png": null,
+    "topics": [
+      "known failure modes",
+      "stuck at max amps",
+      "hall sensor current readout",
+      "fried power switch",
+      "won't arc MIG only",
+      "aux cable receptacle looping",
+      "loose ground root cause",
+      "trigger no feed",
+      "cold feed works",
+      "fault message power cycle",
+      "dead screen dead unit",
+      "warranty 90 day vs 1 year conflict",
+      "extended warranty",
+      "Harbor Freight parts availability",
+      "inverter 600V safety warning"
+    ],
+    "critical": true
+  },
+  {
+    "doc": "community",
+    "page": 0,
+    "png": null,
+    "topics": [
+      "generator compatibility",
+      "thermal overload trip on generator",
+      "Kill-A-Watt frequency check",
+      "61-63 Hz no-load",
+      "throttle trim",
+      "frame ground bond to generator",
+      "Predator 8750 inverter generator",
+      "120V firmware thickness cap",
+      "16 gauge 120V ceiling",
+      "12 AWG extension cord rule",
+      "25 ft cord limit",
+      "breaker realities"
+    ],
+    "critical": true
+  },
+  {
+    "doc": "community",
+    "page": 0,
+    "png": null,
+    "topics": [
+      "feed path triage",
+      "birdnest troubleshooting",
+      "burnback troubleshooting",
+      "tip fusing",
+      "no feed",
+      "wire brand condition",
+      "drive roll knurled vs smooth",
+      "groove size vs wire",
+      "finger-pull tension test",
+      "liner condition check",
+      "brass feed tube grooving",
+      "gun set screw",
+      "burnback timer",
+      "ground lug discoloration",
+      "spare rollers storage compartment",
+      "AmeriSka ordered procedure"
+    ],
+    "critical": true
+  },
+  {
+    "doc": "community",
+    "page": 0,
+    "png": null,
+    "topics": [
+      "consumables field guide",
+      "liner wear rate vs name brand",
+      "contact tip sourcing",
+      "Tweco compatible consumables",
+      "flux-core nozzle fix",
+      "HF wire upgrade",
+      "Tweco gun swap",
+      "2-pin trigger splice",
+      "spool gun aluminum reality",
+      "two bottle gas C25 vs argon",
+      "gas port conflict spool gun"
+    ],
+    "critical": false
+  },
+  {
+    "doc": "community",
+    "page": 0,
+    "png": null,
+    "topics": [
+      "TIG reality",
+      "DC only no AC TIG",
+      "no aluminum TIG without spool gun",
+      "lift-arc only no HF start",
+      "manual gas valve on torch",
+      "no gas solenoid TIG",
+      "foot pedal sold separately",
+      "refund thread framing",
+      "helmet caused pulsating arc"
+    ],
+    "critical": true
+  },
+  {
+    "doc": "community",
+    "page": 0,
+    "png": null,
+    "topics": [
+      "welder glossary",
+      "birdnest definition",
+      "burnback definition",
+      "stickout definition",
+      "dimes definition",
+      "DCEP DCEN definition",
+      "knurled rolls definition",
+      "liner definition",
+      "whip definition",
+      "synergic definition",
+      "lift-arc definition",
+      "aux loop definition",
+      "ball on wire definition",
+      "porosity definition",
+      "duty cycle definition",
+      "spray vs short-circuit transfer"
+    ],
+    "critical": false
+  },
+  {
+    "doc": "community",
+    "page": 0,
+    "png": null,
+    "topics": [
+      "street knowledge",
+      "jack of all trades consensus",
+      "Lincoln lineage lore",
+      "Miller owner praise",
+      "120V vs 240V consensus",
+      "duty cycle field fight",
+      "4 minutes good output",
+      "UI thickness-only knob wish",
+      "parts availability anxiety",
+      "nicknames Omletmaster OmletPro Volcano"
+    ],
+    "critical": false
   }
 ]

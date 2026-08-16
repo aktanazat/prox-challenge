@@ -63,6 +63,23 @@ function ensurePurifyHook() {
 
 const CITE_RE = /\[(owner[-\s]?manual|manual|quick[-\s]?start(?:[-\s]?guide)?|selection[-\s]?chart)\s+p\.?\s*(\d+)\]/gi;
 
+// Community-sourced field citations: [field: r/Welding ×5], optionally linked
+// by a directly following markdown-style (url). Groups 3 (label) / 4 (url)
+// follow CITE_RE's groups 1 (doc) / 2 (page).
+const CHIP_RE = new RegExp(`${CITE_RE.source}|\\[field:\\s*([^\\]]+)\\](?:\\((\\S+?)\\))?`, 'gi');
+const FIELD_TITLE = 'Community-sourced — not from the manual';
+
+function makeFieldChip(el, label) {
+  el.classList.add('cite-field');
+  el.title = FIELD_TITLE;
+  const glyph = document.createElement('span');
+  glyph.className = 'field-glyph';
+  glyph.setAttribute('aria-hidden', 'true');
+  glyph.textContent = '▴';
+  el.textContent = '';
+  el.append(glyph, document.createTextNode(label));
+}
+
 function citeHref(doc, page) {
   const d = doc.toLowerCase();
   let file;
@@ -72,7 +89,8 @@ function citeHref(doc, page) {
   return `/files/${file}#page=${page}`;
 }
 
-// Turn [manual p.19]-style citations in plain text nodes into links.
+// Turn [manual p.19]-style citations and [field: …] community references in
+// plain text nodes into chips.
 function linkifyCitations(rootEl) {
   const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -84,26 +102,44 @@ function linkifyCitations(rootEl) {
   const targets = [];
   let n;
   while ((n = walker.nextNode())) {
-    if (CITE_RE.test(n.nodeValue)) targets.push(n);
-    CITE_RE.lastIndex = 0;
+    if (CHIP_RE.test(n.nodeValue)) targets.push(n);
+    CHIP_RE.lastIndex = 0;
   }
   for (const textNode of targets) {
     const frag = document.createDocumentFragment();
     let last = 0;
     const text = textNode.nodeValue;
-    for (const m of text.matchAll(CITE_RE)) {
+    for (const m of text.matchAll(CHIP_RE)) {
       frag.appendChild(document.createTextNode(text.slice(last, m.index)));
-      const a = document.createElement('a');
-      a.className = 'cite';
-      a.href = citeHref(m[1], m[2]);
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = m[0];
-      frag.appendChild(a);
+      if (m[1] !== undefined) {
+        const a = document.createElement('a');
+        a.className = 'cite';
+        a.href = citeHref(m[1], m[2]);
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = m[0];
+        frag.appendChild(a);
+      } else {
+        const el = document.createElement(m[4] ? 'a' : 'span');
+        if (m[4]) {
+          el.href = m[4];
+          el.target = '_blank';
+          el.rel = 'noopener';
+        }
+        makeFieldChip(el, `field: ${m[3].trim()}`);
+        frag.appendChild(el);
+      }
       last = m.index + m[0].length;
     }
     frag.appendChild(document.createTextNode(text.slice(last)));
     textNode.replaceWith(frag);
+  }
+  // Markdown already turned [field: …](url) into a plain link before this
+  // pass ran; restyle that anchor as a linked field chip.
+  for (const a of rootEl.querySelectorAll('a')) {
+    if (a.classList.contains('cite') || a.classList.contains('cite-field')) continue;
+    const m = a.textContent.match(/^\s*field:\s*(.+?)\s*$/i);
+    if (m) makeFieldChip(a, `field: ${m[1]}`);
   }
 }
 
@@ -360,6 +396,10 @@ function finalizeTurn(meta) {
 function onTurnEnd(ev) {
   finalizeTurn(ev);
   setStatus('online');
+  if (practiceMode && !machineTouchedThisTurn && window.MachineView) {
+    window.MachineView.idle();
+  }
+  machineTouchedThisTurn = false;
 }
 
 function onServerError(message) {
@@ -483,6 +523,8 @@ const BADGES = {
   [PANEL_MIME]: 'PANEL'
 };
 
+const PRINTABLE = new Set(['text/html', REACT_MIME]);
+
 const artifacts = new Map(); // id -> record
 let shellHtml = null;
 let expandedCard = null;
@@ -519,7 +561,13 @@ function createCard(id, type, title) {
   expand.className = 'card-expand icon-btn';
   expand.setAttribute('aria-label', 'Expand artifact');
   expand.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11.5 3.5h5v5M8.5 16.5h-5v-5M16.5 3.5L11 9M3.5 16.5L9 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
-  head.append(badge, titleEl, expand);
+  const print = document.createElement('button');
+  print.type = 'button';
+  print.className = 'card-print';
+  print.textContent = 'Print';
+  print.setAttribute('aria-label', 'Print artifact');
+  print.hidden = !PRINTABLE.has(type);
+  head.append(badge, titleEl, print, expand);
 
   const body = document.createElement('div');
   body.className = 'card-body';
@@ -539,7 +587,11 @@ function createCard(id, type, title) {
   stackEl.prepend(card); // newest first
 
   expand.addEventListener('click', () => toggleExpand(card, expand));
-  return { card, body, badge, titleEl, progress, source, error };
+  print.addEventListener('click', () => {
+    const rec = artifacts.get(id);
+    if (rec) printArtifact(rec);
+  });
+  return { card, body, badge, titleEl, progress, source, error, print };
 }
 
 function toggleExpand(card, btn) {
@@ -596,6 +648,7 @@ function getOrCreateArtifact(id, type, title) {
     rec.source = '';
     rec.done = false;
     rec.ui.badge.textContent = badgeFor(rec.type);
+    rec.ui.print.hidden = !PRINTABLE.has(rec.type);
     if (title) rec.ui.titleEl.textContent = title;
     rec.ui.error.hidden = true;
     rec.card.classList.add('streaming');
@@ -614,7 +667,8 @@ function getOrCreateArtifact(id, type, title) {
     frameReady: false,
     pending: null,
     debounce: 0,
-    watchdog: 0
+    watchdog: 0,
+    printReply: null
   };
   artifacts.set(id, rec);
   updateArtifactCount();
@@ -661,8 +715,7 @@ function getOrCreateArtifact(id, type, title) {
 
 // Parent -> shell. Prefers the MessagePort transferred at shell-ready;
 // direct WindowProxy postMessage is the fallback (unreliable in some builds).
-function sendToShell(rec, payload) {
-  const msg = { type: 'render-artifact', payload };
+function postToShell(rec, msg) {
   if (rec.port) {
     rec.port.postMessage(msg);
     return true;
@@ -672,6 +725,74 @@ function sendToShell(rec, payload) {
     return true;
   } catch {
     return false;
+  }
+}
+
+function sendToShell(rec, payload) {
+  return postToShell(rec, { type: 'render-artifact', payload });
+}
+
+/* ---------- print ---------- */
+
+const PRINT_CSS = [
+  '@page { margin: 12mm; }',
+  'html, body { background: #FFFFFF; color: #000000; }',
+  'body { margin: 0; font: 14px/1.5 "Geist", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }',
+  '.no-print { display: none !important; }',
+  'pre { white-space: pre-wrap; overflow-wrap: break-word; }'
+].join('\n');
+
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+
+// Fill an already-opened window with printable content and trigger the dialog.
+// withTailwind pulls the same CDN build the shell loads, so react artifacts
+// keep utility-class fidelity in print.
+function writePrintDoc(w, title, bodyHtml, withTailwind) {
+  const doc = w.document;
+  doc.open();
+  doc.write(
+    '<!doctype html><html><head><meta charset="utf-8"><title>'
+    + escapeHtml(title || 'Artifact')
+    + '</title>'
+    + (withTailwind ? '<script src="https://cdn.tailwindcss.com/3.4.5"><\/script>' : '')
+    + '<style>' + PRINT_CSS + '</style></head><body>'
+    + bodyHtml
+    + '</body></html>'
+  );
+  doc.close();
+  const go = () => setTimeout(() => {
+    try { w.focus(); w.print(); } catch { /* window already closed */ }
+  }, withTailwind ? 350 : 50); // let Tailwind JIT / fonts settle first
+  if (doc.readyState === 'complete') go();
+  else w.addEventListener('load', go, { once: true });
+}
+
+function printArtifact(rec) {
+  // window.open happens synchronously in the click, keeping popup blockers quiet
+  const w = window.open('', '_blank');
+  if (!w) return;
+  if (rec.type !== REACT_MIME) {
+    writePrintDoc(w, rec.title || rec.id, rec.source, false);
+    return;
+  }
+  // React: the sandbox is opaque-origin, so ask the shell for its rendered
+  // DOM over the existing channel; raw source in a <pre> is the 1 s fallback.
+  let settled = false;
+  const finish = (html, tailwind) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    rec.printReply = null;
+    writePrintDoc(w, rec.title || rec.id, html, tailwind);
+  };
+  const timer = setTimeout(() => {
+    finish(`<pre>${escapeHtml(rec.source)}</pre>`, false);
+  }, 1000);
+  rec.printReply = (html) => finish(html, true);
+  if (!rec.iframe || !postToShell(rec, { type: 'print-request' })) {
+    finish(`<pre>${escapeHtml(rec.source)}</pre>`, false);
   }
 }
 
@@ -858,6 +979,9 @@ function handleShellMessage(rec, d) {
     case 'artifact-error':
       if (rec.done) showArtifactError(rec, String(d.message || 'render failed'));
       break;
+    case 'print-html':
+      if (rec.printReply) rec.printReply(String(d.html ?? ''));
+      break;
   }
 }
 
@@ -888,11 +1012,15 @@ let pendingFocus = null;
 let pendingTutorial = null;
 let pendingPanel = null;
 let tutorialRec = null; // artifact card mirroring the running tutorial
+// Set when a machine-view/panel-state/tutorial artifact lands during a turn;
+// practice mode returns the camera to idle on turn end unless one arrived.
+let machineTouchedThisTurn = false;
 
 function focusMachine(spec) {
   machinePanel.classList.remove('collapsed');
   machineToggle.setAttribute('aria-expanded', 'true');
   machineToggle.textContent = 'COLLAPSE';
+  machineTouchedThisTurn = true;
   if (window.MachineView) {
     window.MachineView.focus(spec);
   } else {
@@ -906,6 +1034,7 @@ function applyPanelState(spec) {
   machinePanel.classList.remove('collapsed');
   machineToggle.setAttribute('aria-expanded', 'true');
   machineToggle.textContent = 'COLLAPSE';
+  machineTouchedThisTurn = true;
   if (window.MachineView && window.MachineView.panelState) {
     window.MachineView.panelState(spec);
   } else {
@@ -917,6 +1046,7 @@ function applyPanelState(spec) {
 // Route a parsed tutorial script into the 3D runtime; same-id updates land
 // here again and restart the player with the new script.
 function startTutorial(rec, script) {
+  machineTouchedThisTurn = true;
   tutorialRec = rec;
   if (rec.tutorialLink) {
     rec.tutorialLink.querySelector('.mv-label').textContent =

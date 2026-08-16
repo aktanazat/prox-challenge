@@ -350,7 +350,15 @@ function renderFallback(source) {
 var renderSeq = 0;
 
 function onParentMessage(d) {
-  if (!d || d.type !== 'render-artifact' || !d.payload) return;
+  if (!d) return;
+  // Parent print flow: reply with the live rendered DOM so the parent can
+  // reproduce it in a print window (the sandbox is opaque-origin, so the
+  // parent can never read this document directly).
+  if (d.type === 'print-request') {
+    post({ type: 'print-html', html: root.innerHTML });
+    return;
+  }
+  if (d.type !== 'render-artifact' || !d.payload) return;
   var p = d.payload;
   var seq = ++renderSeq;
   currentId = p.id;
