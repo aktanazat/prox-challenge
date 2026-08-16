@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OmniPro 220 Technical Expert — Vulcan</title>
 <meta name="description" content="Multimodal technical expert for the Vulcan OmniPro 220 welder. Setup, settings, weld diagnosis and maintenance, grounded in the machine's own manuals.">
-<meta name="theme-color" content="#FFFFFF">
+<meta name="theme-color" content="#F6F3EC">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ff6a00'/%3E%3Cpath d='M7 7h6l3 12 3-12h6l-7 20h-4z' fill='%23ffffff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,8 +26,8 @@
 
 <header class="topbar">
   <h1 class="brand">
-    <span class="brand-mark" aria-hidden="true">V</span>
-    <span class="brand-name">OmniPro 220 Expert</span>
+    <span class="brand-name">Vulcan OmniPro 220</span>
+    <span class="brand-role">Technical Expert</span>
   </h1>
   <div class="topbar-actions">
     <span class="garage-mic mono" id="garage-mic" hidden role="status" aria-label="Garage mode microphone">
@@ -78,7 +78,8 @@
   <section class="workbench" aria-label="Workbench">
     <div class="panel machine-panel">
       <div class="panel-head">
-        <h2 class="panel-title">Machine</h2>
+        <h2 class="panel-title sr-only">Machine</h2>
+        <span class="head-rule" aria-hidden="true"></span>
         <span class="practice-chip mono" id="practice-chip" hidden>PRACTICE</span>
         <div class="panel-tools">
           <button id="practice-toggle" class="text-btn" aria-pressed="false"
@@ -89,7 +90,8 @@
       </div>
       <div class="machine-body" id="machine-body">
         <div class="machine-canvas" id="machine-canvas" role="img"
-             aria-label="Interactive 3D model of the Vulcan OmniPro 220 welder. Drag to orbit."></div>
+             aria-label="Interactive 3D model of the Vulcan OmniPro 220 welder. Drag to orbit."><span
+             class="plate-label" aria-hidden="true">Machine</span></div>
       </div>
       <div class="tutorial-player" id="tutorial-player" role="group" aria-label="Guided tutorial player" hidden>
         <div class="tp-head">
@@ -121,6 +123,7 @@
     <div class="panel artifacts-panel">
       <div class="panel-head">
         <h2 class="panel-title">Artifacts</h2>
+        <span class="head-rule" aria-hidden="true"></span>
         <span class="panel-count mono" id="artifact-count" hidden></span>
       </div>
       <div class="artifact-stack" id="artifact-stack">

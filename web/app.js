@@ -189,29 +189,38 @@ function hideEmpty() {
   if (el) el.remove();
 }
 
-// empty state — quiet wordmark, greeting, 2×2 starter cards (the defaults)
+// empty state — the annual-report cover: circle plate with horizon band,
+// small editorial greeting, numbered hairline-ruled starter index
 function buildEmptyState() {
   const wrap = document.createElement('div');
   wrap.className = 'chat-empty';
   wrap.id = 'chat-empty';
-  const mark = document.createElement('p');
-  mark.className = 'empty-wordmark';
-  mark.innerHTML = '<span class="brand-mark" aria-hidden="true">V</span>VULCAN';
+  const plate = document.createElement('div');
+  plate.className = 'cover-plate';
+  plate.setAttribute('role', 'img');
+  plate.setAttribute('aria-label', 'Vulcan OmniPro 220 welder');
   const greet = document.createElement('p');
   greet.className = 'empty-greeting';
-  greet.textContent = 'Hello! How can I help you today?';
-  const grid = document.createElement('div');
-  grid.className = 'starter-grid';
-  grid.setAttribute('role', 'group');
-  grid.setAttribute('aria-label', 'Suggested questions');
-  for (const item of DEFAULT_SUGGESTIONS) {
+  greet.textContent = 'How can I help you today?';
+  const list = document.createElement('div');
+  list.className = 'starter-list';
+  list.setAttribute('role', 'group');
+  list.setAttribute('aria-label', 'Suggested questions');
+  DEFAULT_SUGGESTIONS.forEach((item, i) => {
     const b = document.createElement('button');
     b.className = 'starter';
-    b.textContent = item;
+    const idx = document.createElement('span');
+    idx.className = 'starter-idx mono';
+    idx.setAttribute('aria-hidden', 'true');
+    idx.textContent = String(i + 1).padStart(2, '0');
+    const label = document.createElement('span');
+    label.className = 'starter-text';
+    label.textContent = item;
+    b.append(idx, label);
     b.addEventListener('click', () => sendMessage(item));
-    grid.appendChild(b);
-  }
-  wrap.append(mark, greet, grid);
+    list.appendChild(b);
+  });
+  wrap.append(plate, greet, list);
   return wrap;
 }
 
