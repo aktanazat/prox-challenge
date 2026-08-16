@@ -1,6 +1,6 @@
 // Vulcan OmniPro 220 Technical Expert — frontend application.
 // Talks to the backend over the frozen HTTP/SSE contract; renders streamed
-// markdown, tool chips, artifacts (sandboxed shell iframes) and machine views.
+// markdown, tool step-lines, artifacts (sandboxed shell iframes) and machine views.
 
 'use strict';
 
@@ -8,7 +8,7 @@
 
 const $ = (id) => document.getElementById(id);
 const messagesEl = $('messages');
-const chatEmptyEl = $('chat-empty');
+const newBtn = $('new-chat');
 const suggestionsEl = $('suggestions');
 const inputEl = $('input');
 const sendBtn = $('send-btn');
@@ -143,13 +143,40 @@ function renderMarkdownInto(el, src) {
 
 /* ================= chat turn model ================= */
 // An assistant turn is a sequence of segments: markdown bodies interleaved
-// with tool-chip groups, so chips appear exactly where the agent used tools.
+// with tool step-lines, so activity appears exactly where the agent used tools.
 
 let currentTurn = null;
 let lastUserText = null;
 
 function hideEmpty() {
-  if (chatEmptyEl) chatEmptyEl.remove();
+  const el = $('chat-empty');
+  if (el) el.remove();
+}
+
+// empty state — quiet wordmark, greeting, 2×2 starter cards (the defaults)
+function buildEmptyState() {
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-empty';
+  wrap.id = 'chat-empty';
+  const mark = document.createElement('p');
+  mark.className = 'empty-wordmark';
+  mark.innerHTML = '<span class="brand-mark" aria-hidden="true">V</span>VULCAN';
+  const greet = document.createElement('p');
+  greet.className = 'empty-greeting';
+  greet.textContent = 'Hello! How can I help you today?';
+  const grid = document.createElement('div');
+  grid.className = 'starter-grid';
+  grid.setAttribute('role', 'group');
+  grid.setAttribute('aria-label', 'Suggested questions');
+  for (const item of DEFAULT_SUGGESTIONS) {
+    const b = document.createElement('button');
+    b.className = 'starter';
+    b.textContent = item;
+    b.addEventListener('click', () => sendMessage(item));
+    grid.appendChild(b);
+  }
+  wrap.append(mark, greet, grid);
+  return wrap;
 }
 
 function pinnedToBottom() {
@@ -169,7 +196,7 @@ function ensureTurn() {
   content.className = 'turn-content';
   el.appendChild(content);
   messagesEl.appendChild(el);
-  currentTurn = { el, content, segments: [], toolCount: 0 };
+  currentTurn = { el, content, segments: [], toolCount: 0, sources: new Map() };
   return currentTurn;
 }
 
@@ -202,65 +229,131 @@ function onTextDelta(text) {
 
 const TOOL_VERBS = { Read: 'Reading', Grep: 'Searching', Glob: 'Scanning' };
 
+// step-line glyphs: file for reads, wrench for searches, chevron trailing
+const GLYPH_FILE = '<svg class="glyph" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h5L12.5 5v9a.5.5 0 0 1-.5.5H4a.5.5 0 0 1-.5-.5v-12a.5.5 0 0 1 .5-.5z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 1.5V5h3.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+const GLYPH_WRENCH = '<svg class="glyph" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.6 4.2a3.4 3.4 0 0 1-4.5 4.5l-4.3 4.3a1.3 1.3 0 0 1-1.8-1.8l4.3-4.3a3.4 3.4 0 0 1 4.5-4.5L9.5 4.7l1.8 1.8 2.3-2.3z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+const GLYPH_CHEV_RIGHT = '<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const GLYPH_CHEV_DOWN = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+// Map a tool detail (file path or search pattern) to a deduped source entry.
+// Page PNGs link to the matching PDF anchor; knowledge files link directly.
+const PAGE_RE = /(owner-manual|quick-start|selection-chart)[^/]*?-p(\d+)\.png/i;
+const PDF_FILES = {
+  'owner-manual': 'owner-manual.pdf',
+  'quick-start': 'quick-start-guide.pdf',
+  'selection-chart': 'selection-chart.pdf'
+};
+const DOC_TITLES = {
+  'owner-manual': 'Owner’s manual',
+  'quick-start': 'Quick-start guide',
+  'selection-chart': 'Selection chart'
+};
+
+function classifyToolDetail(detail) {
+  if (typeof detail !== 'string' || !detail) return null;
+  const page = detail.match(PAGE_RE);
+  if (page) {
+    const doc = page[1].toLowerCase();
+    const n = parseInt(page[2], 10);
+    return {
+      key: `${doc}#${n}`,
+      step: `${doc} p.${n}`,
+      link: `${DOC_TITLES[doc]} · p.${n}`,
+      href: `/files/${PDF_FILES[doc]}#page=${n}`
+    };
+  }
+  if (/[*?[\]{}|]/.test(detail)) return null; // glob/regex pattern, not a file
+  const ki = detail.lastIndexOf('knowledge/');
+  if (ki < 0) return null;
+  const rel = detail.slice(ki + 'knowledge/'.length).replace(/^\/+/, '');
+  if (!rel || rel.endsWith('/')) return null;
+  const base = rel.split('/').pop();
+  return { key: `k:${rel}`, step: base, link: base, href: `/knowledge/${rel}`, title: rel };
+}
+
+const shortText = (s, n = 44) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+function stepText(ev) {
+  const verb = TOOL_VERBS[ev.name] || ev.name;
+  const src = classifyToolDetail(ev.detail);
+  if (src) return `${verb} ${src.step}…`;
+  const d = (ev.detail || '').trim();
+  if (!d) return `${verb} the manuals…`;
+  const t = d.includes('/') && !/[*?[\]{}|\s]/.test(d) ? d.split('/').pop() : d;
+  return `${verb} “${shortText(t)}”…`;
+}
+
 function onTool(ev) {
   setStatus('working');
   const turn = ensureTurn();
   let seg = lastSegment(turn);
-  if (!seg || seg.kind !== 'chips') {
-    const details = document.createElement('details');
-    details.className = 'chips live';
-    details.open = true;
-    const summary = document.createElement('summary');
-    details.appendChild(summary);
-    turn.content.appendChild(details);
-    seg = { kind: 'chips', el: details, summary, count: 0 };
+  if (!seg || seg.kind !== 'steps') {
+    const el = document.createElement('div');
+    el.className = 'steps';
+    turn.content.appendChild(el);
+    seg = { kind: 'steps', el };
     turn.segments.push(seg);
   }
-  const prev = seg.el.querySelector('.chip.active');
-  if (prev) prev.classList.replace('active', 'done');
+  const prev = seg.el.querySelector('.step-line.running');
+  if (prev) prev.classList.remove('running');
 
   const pinned = pinnedToBottom();
-  const chip = document.createElement('div');
-  chip.className = 'chip active';
-  const spin = document.createElement('span');
-  spin.className = 'chip-spin';
-  const label = document.createElement('span');
-  label.textContent = `${TOOL_VERBS[ev.name] || ev.name}`;
-  chip.append(spin, label);
-  if (ev.detail) {
-    const detail = document.createElement('span');
-    detail.className = 'chip-detail';
-    detail.textContent = ev.detail;
-    chip.appendChild(detail);
-  }
-  seg.el.appendChild(chip);
-  seg.count += 1;
+  const line = document.createElement('div');
+  line.className = 'step-line running';
+  line.innerHTML = `${ev.name === 'Read' ? GLYPH_FILE : GLYPH_WRENCH}<span class="step-label"></span>${GLYPH_CHEV_RIGHT}`;
+  line.querySelector('.step-label').textContent = stepText(ev);
+  seg.el.appendChild(line);
   turn.toolCount += 1;
+  const src = classifyToolDetail(ev.detail);
+  if (src && !turn.sources.has(src.key)) turn.sources.set(src.key, src);
   scrollIfPinned(pinned);
+}
+
+// "Used N sources ⌄" — distinct files/pages touched this turn, as links
+function buildSourcesExpander(sources) {
+  const n = sources.size;
+  const details = document.createElement('details');
+  details.className = 'sources';
+  const summary = document.createElement('summary');
+  const label = document.createElement('span');
+  label.textContent = `Used ${plural(n, 'source')}`;
+  summary.appendChild(label);
+  summary.insertAdjacentHTML('beforeend', GLYPH_CHEV_DOWN);
+  const list = document.createElement('div');
+  list.className = 'source-list';
+  for (const src of sources.values()) {
+    const a = document.createElement('a');
+    a.className = 'source-link';
+    a.href = src.href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = src.link;
+    if (src.title) a.title = src.title;
+    list.appendChild(a);
+  }
+  details.append(summary, list);
+  return details;
 }
 
 function finalizeTurn(meta) {
   const turn = currentTurn;
   currentTurn = null;
   if (!turn) return;
+  const pinned = pinnedToBottom();
   for (const seg of turn.segments) {
-    if (seg.kind !== 'chips') continue;
-    seg.el.classList.remove('live');
-    seg.el.open = false;
-    seg.summary.textContent = plural(seg.count, 'source lookup');
-    const activeChip = seg.el.querySelector('.chip.active');
-    if (activeChip) activeChip.classList.replace('active', 'done');
+    if (seg.kind === 'steps') seg.el.remove();
   }
+  if (turn.sources.size > 0) turn.content.appendChild(buildSourcesExpander(turn.sources));
   if (meta && (meta.cost_usd != null || meta.duration_ms != null)) {
     const line = document.createElement('div');
-    line.className = 'turn-meta mono';
+    line.className = 'turn-meta';
     const parts = [];
     if (typeof meta.cost_usd === 'number') parts.push(`$${meta.cost_usd.toFixed(4)}`);
     if (typeof meta.duration_ms === 'number') parts.push(`${(meta.duration_ms / 1000).toFixed(1)} s`);
-    if (turn.toolCount > 0) parts.push(plural(turn.toolCount, 'source'));
     line.textContent = parts.join(' · ');
     turn.el.appendChild(line);
   }
+  scrollIfPinned(pinned);
   tts.flush();
 }
 
@@ -282,7 +375,7 @@ function onServerError(message) {
   if (lastUserText) {
     const retry = document.createElement('button');
     retry.className = 'retry-btn';
-    retry.textContent = 'RETRY';
+    retry.textContent = 'Retry';
     retry.addEventListener('click', () => {
       card.remove();
       sendMessage(lastUserText);
@@ -306,8 +399,20 @@ function renderUserMessage(text, thumbPath) {
   hideEmpty();
   finalizeTurn(null); // a new user turn closes any dangling assistant turn
   const el = document.createElement('div');
-  el.className = 'msg user';
-  el.textContent = text;
+  const job = text.match(/^\[job\]\s*([\s\S]*)$/i);
+  if (job) {
+    // job/system notes render as the quiet callout pattern, bold lead
+    el.className = 'msg job';
+    const body = job[1].trim() || 'Job update';
+    const dash = body.indexOf(' — ');
+    const lead = document.createElement('strong');
+    lead.textContent = dash > 0 ? body.slice(0, dash) : body;
+    el.appendChild(lead);
+    if (dash > 0) el.appendChild(document.createTextNode(body.slice(dash)));
+  } else {
+    el.className = 'msg user';
+    el.textContent = text;
+  }
   if (thumbPath) {
     const img = document.createElement('img');
     img.className = 'upload-thumb';
@@ -327,7 +432,7 @@ function markFailed(msgEl, text) {
   label.textContent = 'Not delivered.';
   const retry = document.createElement('button');
   retry.className = 'retry-btn';
-  retry.textContent = 'RETRY';
+  retry.textContent = 'Retry';
   retry.addEventListener('click', async () => {
     fail.remove();
     const ok = await postMessage(text);
@@ -1210,9 +1315,14 @@ if (SR) {
 
 /* ================= composer ================= */
 
+function updateSendState() {
+  sendBtn.disabled = !inputEl.value.trim();
+}
+
 function autosize() {
   inputEl.style.height = 'auto';
   inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
+  updateSendState();
 }
 inputEl.addEventListener('input', autosize);
 
@@ -1268,6 +1378,7 @@ fileInput.addEventListener('change', async () => {
 
 let sessionId = null;
 let offlineNoticeShown = false;
+let streamCtl = null; // aborting the live stream forces a reconnect
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -1384,8 +1495,10 @@ async function streamLoop() {
       continue;
     }
     try {
+      streamCtl = new AbortController();
       const res = await fetch(`/api/session/${sessionId}/stream`, {
-        headers: { accept: 'text/event-stream' }
+        headers: { accept: 'text/event-stream' },
+        signal: streamCtl.signal
       });
       if (res.status === 404) {
         sessionId = null; // reaped: next loop creates a fresh session
@@ -1396,7 +1509,11 @@ async function streamLoop() {
       setStatus('online');
       await consumeStream(res.body);
       // clean end of stream: reconnect, existing UI state is preserved
-    } catch {
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        setStatus('connecting');
+        continue; // "New" swapped sessions — reconnect immediately
+      }
       // network drop: fall through to backoff
     }
     setStatus('reconnecting');
@@ -1405,13 +1522,63 @@ async function streamLoop() {
   }
 }
 
+/* ================= "New" — fresh session, clean bench ================= */
+
+async function resetSession() {
+  newBtn.disabled = true;
+  try {
+    await createSession(); // fresh session id — job context stays behind
+  } catch {
+    addNotice('Could not start a new session — backend unreachable.');
+    return;
+  } finally {
+    newBtn.disabled = false;
+  }
+  if (streamCtl) streamCtl.abort(); // stream loop reconnects to the new session
+
+  // transcript
+  currentTurn = null;
+  lastUserText = null;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  tts.buf = '';
+  messagesEl.textContent = '';
+  messagesEl.appendChild(buildEmptyState());
+  renderSuggestions([]);
+  inputEl.value = '';
+  autosize();
+
+  // artifacts
+  collapseExpanded();
+  for (const rec of artifacts.values()) {
+    clearTimeout(rec.debounce);
+    clearTimeout(rec.watchdog);
+  }
+  artifacts.clear();
+  stackEl.textContent = '';
+  stackEl.appendChild(stackEmptyEl);
+  updateArtifactCount();
+
+  // machine + modes back to idle
+  tutorialRec = null;
+  pendingFocus = pendingTutorial = pendingPanel = null;
+  const player = $('tutorial-player');
+  if (player) player.hidden = true;
+  if (window.MachineView) window.MachineView.idle();
+  dismissPopover();
+  if (practiceMode) {
+    practiceMode = false;
+    practiceBtn.setAttribute('aria-pressed', 'false');
+    practiceChip.hidden = true;
+  }
+  offlineNoticeShown = false;
+}
+
+newBtn.addEventListener('click', resetSession);
+
 /* ================= boot ================= */
 
 (async function boot() {
-  renderSuggestions(DEFAULT_SUGGESTIONS);
-  if (window.matchMedia('(max-width: 880px)').matches) {
-    inputEl.placeholder = 'Ask the expert…';
-  }
+  messagesEl.appendChild(buildEmptyState());
   autosize();
   setStatus('connecting');
   try {

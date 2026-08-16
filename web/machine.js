@@ -605,9 +605,9 @@ function makeRing(radius) {
 
 function makeLabelSprite(text, primary) {
   const pad = 26;
-  const font = (primary ? 44 : 34) + 'px -apple-system, "Helvetica Neue", Arial, sans-serif';
+  const font = (primary ? 44 : 34) + 'px Geist, -apple-system, "Helvetica Neue", Arial, sans-serif';
   const measure = document.createElement('canvas').getContext('2d');
-  measure.font = '700 ' + font;
+  measure.font = '600 ' + font;
   const tw = Math.ceil(measure.measureText(text.toUpperCase()).width);
   const cw = Math.min(1024, tw + pad * 2);
   const ch = primary ? 92 : 74;
@@ -615,15 +615,16 @@ function makeLabelSprite(text, primary) {
   c.width = cw;
   c.height = ch;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(10,11,13,0.94)';
+  // white card with hairline edge, matching the light chrome outside the well
+  ctx.fillStyle = 'rgba(255,255,255,0.96)';
   ctx.beginPath();
-  ctx.roundRect(1, 1, cw - 2, ch - 2, 10);
+  ctx.roundRect(1, 1, cw - 2, ch - 2, 12);
   ctx.fill();
-  ctx.strokeStyle = primary ? '#ff6a00' : '#3a4048';
+  ctx.strokeStyle = primary ? '#9CA3AF' : '#D1D5DB';
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.fillStyle = primary ? '#ffffff' : '#cfd2d6';
-  ctx.font = '700 ' + font;
+  ctx.fillStyle = primary ? '#111827' : '#374151';
+  ctx.font = '600 ' + font;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text.toUpperCase(), cw / 2, ch / 2 + 2);

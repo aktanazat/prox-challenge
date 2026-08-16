@@ -19,13 +19,14 @@
   }
 }
 </script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: dark; }
+  :root { color-scheme: light; }
   body {
     margin: 0;
-    background: #141619;
-    color: #e8eaed;
-    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: #FFFFFF;
+    color: #1F2937;
+    font: 14px/1.5 "Geist", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
   #root { padding: 12px; }
   #root svg { max-width: 100%; height: auto; }
@@ -34,7 +35,7 @@
     padding: 16px 4px;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 11px;
-    color: #6f757c;
+    color: #9CA3AF;
   }
   pre.fallback {
     margin: 0;
@@ -42,7 +43,7 @@
     white-space: pre-wrap;
     overflow-wrap: break-word;
     font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
-    color: #a8adb4;
+    color: #52525b;
   }
 </style>
 </head>
@@ -118,10 +119,10 @@ function getMermaid() {
         var mermaid = mod.default;
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'dark',
-          darkMode: true,
-          fontFamily: '-apple-system, "Segoe UI", "Helvetica Neue", sans-serif',
-          themeVariables: { primaryColor: '#22262b', primaryBorderColor: '#3a4048', lineColor: '#a8adb4' }
+          theme: 'neutral',
+          darkMode: false,
+          fontFamily: '"Geist", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", sans-serif',
+          themeVariables: { primaryColor: '#F3F4F6', primaryBorderColor: '#D1D5DB', lineColor: '#6B7280' }
         });
         return mermaid;
       });
