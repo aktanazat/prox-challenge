@@ -6,6 +6,9 @@ The agent answers deep technical questions grounded in the 48-page owner's manua
 
 The backend is a native Rust implementation of the Claude Agent SDK client protocol. No Node.js runs at serve time.
 
+
+**Demo video:** [`demo/demo-walkthrough.mp4`](demo/demo-walkthrough.mp4) — 2 minutes: a duty-cycle answer worked through (manual-page lightbox, sources expander), the agent authoring and performing a 12-step 3D spool-loading tutorial with the glove hand, and the field-truth answer that catches the machine's own firmware preset error and sets the corrected value on the virtual panel.
+
 ## Quick start
 
 ```bash
